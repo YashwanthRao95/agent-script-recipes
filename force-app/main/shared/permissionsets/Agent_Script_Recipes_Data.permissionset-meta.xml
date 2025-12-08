@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <!--
     <classAccesses>
         <apexClass>IssueClassifier</apexClass>
         <enabled>true</enabled>
     </classAccesses>
+    -->
     <classAccesses>
         <apexClass>PaymentGatewayController</apexClass>
         <enabled>true</enabled>
@@ -387,6 +389,7 @@
         <field>ASR_Transaction_Log__c.To_Account__c</field>
         <readable>true</readable>
     </fieldPermissions>
+    <!--
     <fieldPermissions>
         <editable>true</editable>
         <field>Account.Churn_Risk_Score__c</field>
@@ -402,16 +405,19 @@
         <field>Case.Assigned_Agent__c</field>
         <readable>true</readable>
     </fieldPermissions>
+    -->
     <fieldPermissions>
         <editable>true</editable>
         <field>Case.Description</field>
         <readable>true</readable>
     </fieldPermissions>
+    <!--
     <fieldPermissions>
         <editable>true</editable>
         <field>Case.Escalation_Reason__c</field>
         <readable>true</readable>
     </fieldPermissions>
+    -->
     <fieldPermissions>
         <editable>false</editable>
         <field>Case.Priority</field>
@@ -427,6 +433,7 @@
         <field>Case.Type</field>
         <readable>true</readable>
     </fieldPermissions>
+    <!--
     <fieldPermissions>
         <editable>true</editable>
         <field>Contact.Customer_ID__c</field>
@@ -467,6 +474,7 @@
         <field>Order.Tracking_Number__c</field>
         <readable>true</readable>
     </fieldPermissions>
+    -->
     <hasActivationRequired>false</hasActivationRequired>
     <label>Agent Script Recipes Data</label>
     <objectPermissions>
@@ -499,6 +507,7 @@
         <viewAllFields>false</viewAllFields>
         <viewAllRecords>true</viewAllRecords>
     </objectPermissions>
+    <!--
     <objectPermissions>
         <allowCreate>true</allowCreate>
         <allowDelete>true</allowDelete>
@@ -509,6 +518,7 @@
         <viewAllFields>false</viewAllFields>
         <viewAllRecords>true</viewAllRecords>
     </objectPermissions>
+    -->
     <objectPermissions>
         <allowCreate>true</allowCreate>
         <allowDelete>true</allowDelete>
@@ -549,6 +559,7 @@
         <viewAllFields>false</viewAllFields>
         <viewAllRecords>true</viewAllRecords>
     </objectPermissions>
+    <!--
     <objectPermissions>
         <allowCreate>true</allowCreate>
         <allowDelete>true</allowDelete>
@@ -559,6 +570,7 @@
         <viewAllFields>false</viewAllFields>
         <viewAllRecords>true</viewAllRecords>
     </objectPermissions>
+    -->
     <objectPermissions>
         <allowCreate>true</allowCreate>
         <allowDelete>true</allowDelete>

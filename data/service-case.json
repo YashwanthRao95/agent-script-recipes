@@ -6,7 +6,6 @@
             "Status": "New",
             "Priority": "Medium",
             "Origin": "Web",
-            "Escalation_Reason__c": "Complexity",
             "Survey_Logs__r": {
                 "records": [
                     {
@@ -42,8 +41,7 @@
             "Subject": "Shipping delay",
             "Status": "Escalated",
             "Priority": "High",
-            "Origin": "Email",
-            "Escalation_Reason__c": "Customer Satisfaction"
+            "Origin": "Email"
         }
     ]
 }

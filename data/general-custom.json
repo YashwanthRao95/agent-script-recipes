@@ -16,16 +16,6 @@
             "Start_Date__c": "2024-01-01",
             "End_Date__c": "2024-12-31",
             "Format__c": "PDF"
-        },
-        {
-            "attributes": {
-                "type": "ASR_Customer_Onboarding__c",
-                "referenceId": "onboard1"
-            },
-            "Full_Name__c": "New User",
-            "Email__c": "new.user@example.com",
-            "Status__c": "Pending",
-            "Is_Verified__c": false
         }
     ]
 }

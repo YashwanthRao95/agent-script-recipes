@@ -100,11 +100,5 @@
         "saveRefs": false,
         "resolveRefs": false,
         "files": ["general-report.json"]
-    },
-    {
-        "sobject": "ASR_Customer_Onboarding__c",
-        "saveRefs": false,
-        "resolveRefs": false,
-        "files": ["general-onboarding.json"]
     }
 ]

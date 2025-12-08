@@ -14,13 +14,7 @@
                         "FirstName": "Jane",
                         "LastName": "Doe",
                         "Email": "jane.doe@example.com",
-                        "Phone": "555-0101",
-                        "Language__c": "English",
-                        "Timezone__c": "America/Los_Angeles",
-                        "Loyalty_Tier__c": "Gold",
-                        "Lifetime_Value__c": 15000,
-                        "Loyalty_Status__c": "Active",
-                        "User_ID__c": "U001"
+                        "Phone": "555-0101"
                     }
                 ]
             }
@@ -39,13 +33,7 @@
                         "FirstName": "John",
                         "LastName": "Smith",
                         "Email": "john.smith@example.com",
-                        "Phone": "555-0102",
-                        "Language__c": "Spanish",
-                        "Timezone__c": "Europe/Madrid",
-                        "Loyalty_Tier__c": "Silver",
-                        "Lifetime_Value__c": 5000,
-                        "Loyalty_Status__c": "Active",
-                        "User_ID__c": "U002"
+                        "Phone": "555-0102"
                     }
                 ]
             }

@@ -11,8 +11,7 @@
                             "referenceId": "order1"
                         },
                         "EffectiveDate": "2024-10-01",
-                        "Status": "Draft",
-                        "Tracking_Number__c": "TRK123456789"
+                        "Status": "Draft"
                     },
                     {
                         "attributes": {
@@ -20,8 +19,7 @@
                             "referenceId": "order2"
                         },
                         "EffectiveDate": "2024-11-15",
-                        "Status": "Draft",
-                        "Tracking_Number__c": "TRK987654321"
+                        "Status": "Draft"
                     }
                 ]
             }
@@ -40,8 +38,7 @@
                             "referenceId": "order3"
                         },
                         "EffectiveDate": "2024-12-01",
-                        "Status": "Draft",
-                        "Tracking_Number__c": "TRK555555555"
+                        "Status": "Draft"
                     }
                 ]
             }

@@ -40,23 +40,12 @@ topic beginner_mode:
          inputs:
             query: string
                description: "Search query text to find relevant knowledge base articles"
-            filters: object
+            filters: string
                description: "Filter criteria object to refine search results (e.g., type, date range, tags)"
          outputs:
-            results: list[object]
+            results: list[string]
                description: "List of search result objects containing matching knowledge base articles"
          target: "flow://PerformSearch"
-      create_record:
-         description: "Create a new record"
-         inputs:
-            record_type: string
-               description: "Type of record to create (e.g., Account, Contact, Case, Custom__c)"
-            data: object
-               description: "Record data object containing field-value pairs for the new record"
-         outputs:
-            record_id: string
-               description: "Unique identifier of the newly created record"
-         target: "flow://CreateRecord"
 
    reasoning:
       instructions:->
@@ -68,9 +57,6 @@ topic beginner_mode:
          simple_search: @actions.perform_search
             with query=...
             with filters=...
-         create_new_item: @actions.create_record
-            with record_type=...
-            with data=...
 
          switch_to_advanced: @utils.transition to @topic.advanced_mode
 
@@ -84,34 +70,12 @@ topic advanced_mode:
          inputs:
             query: string
                description: "Search query text with support for advanced syntax and operators"
-            filters: object
+            filters: string
                description: "Advanced filter criteria object with type, date range, tags, and custom field filters"
          outputs:
-            results: list[object]
+            results: list[string]
                description: "Paginated list of search result objects with relevance scores"
          target: "flow://PerformSearch"
-      create_record:
-         description:  "Create new database record. Specify record_type (Account, Contact, Case, Custom__c) and provide data object with field-value pairs. Returns record ID on success."
-         inputs:
-            record_type: string
-               description: "Database record type (Account, Contact, Case, Custom__c, etc.)"
-            data: object
-               description: "Record data object with field-value pairs matching the specified record type schema"
-         outputs:
-            record_id: string
-               description: "Unique 18-character Salesforce record ID"
-         target: "flow://CreateRecord"
-      generate_report:
-         description: "Generate analytics report. Available types: sales_summary, user_activity, performance_metrics. Accepts parameters object for date ranges, filters, and aggregation options."
-         inputs:
-            report_type: string
-               description: "Report type (sales_summary, user_activity, performance_metrics, etc.)"
-            parameters: object
-               description: "Report parameters object with date ranges, filters, and aggregation options"
-         outputs:
-            report_url: string
-               description: "URL to access or download the generated report"
-         target: "flow://GenerateReport"
 
    reasoning:
       instructions:->
@@ -123,12 +87,6 @@ topic advanced_mode:
          advanced_search: @actions.perform_search
             with query=...
             with filters=...
-         create_record_advanced: @actions.create_record
-            with record_type=...
-            with data=...
-         generate_analytics: @actions.generate_report
-            with report_type=...
-            with parameters=...
 
          switch_to_beginner: @utils.transition to @topic.beginner_mode
 
@@ -142,34 +100,12 @@ topic contextual_search:
          inputs:
             query: string
                description: "Search query text adapted to the current search context"
-            filters: object
+            filters: string
                description: "Context-specific filter criteria object"
          outputs:
-            results: list[object]
+            results: list[string]
                description: "List of context-relevant search result objects"
          target: "flow://PerformSearch"
-      create_record:
-         description: "Create a new record"
-         inputs:
-            record_type: string
-               description: "Type of record to create based on current context"
-            data: object
-               description: "Record data object with fields relevant to the current context"
-         outputs:
-            record_id: string
-               description: "Unique identifier of the newly created record"
-         target: "flow://CreateRecord"
-      generate_report:
-         description: "Generate an analytics report"
-         inputs:
-            report_type: string
-               description: "Type of analytics report to generate"
-            parameters: object
-               description: "Report parameters object for customization"
-         outputs:
-            report_url: string
-               description: "URL to access the generated report"
-         target: "flow://GenerateReport"
 
    reasoning:
       instructions:->
@@ -179,19 +115,6 @@ topic contextual_search:
 
       actions:
          # When searching for accounts
-         search_accounts: @actions.perform_search
-            available when @variables.search_context == "accounts"
-            with query=...
-            with filters=...
-
-         # When searching for contacts
-         search_contacts: @actions.perform_search
-            available when @variables.search_context == "contacts"
-            with query=...
-            with filters=...
-
-         # When searching for cases
-         search_cases: @actions.perform_search
-            available when @variables.search_context == "cases"
+         contextual_search: @actions.perform_search
             with query=...
             with filters=...

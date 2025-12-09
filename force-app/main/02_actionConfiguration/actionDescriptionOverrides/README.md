@@ -304,7 +304,7 @@ Agent: [Calls perform_search with query="API" and complex filters]
 ### Example: Context-Aware
 
 ```text
-User: Search for John Smith
+User: Search for contact John Smith
 
 [Context: search_context = "accounts"]
 Agent sees: search_accounts action available

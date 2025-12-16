@@ -9,7 +9,14 @@ public with sharing class PersonalizedGuestExperiences {
         String email = requests[0].email;
 
         // Get contact ID
-        Id contactId = [SELECT Id FROM Contact WHERE Email = :email LIMIT 1].Id;
+        Id contactId = [
+            SELECT Id
+            FROM Contact
+            WHERE Email = :email
+            WITH USER_MODE
+            LIMIT 1
+        ]
+        .Id;
 
         // Get experiences for contact
         List<ASR_Experience__c> experiences = ExperienceController.getExperiences(

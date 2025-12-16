@@ -1,6 +1,6 @@
-@isTest
+@IsTest
 private class ExperienceControllerTest {
-    @testSetup
+    @TestSetup
     static void setupTestData() {
         Contact testContact = new Contact(
             FirstName = 'Alexander',
@@ -27,8 +27,8 @@ private class ExperienceControllerTest {
         insert testExperience;
     }
 
-    @isTest
-    static void testGetExperiences() {
+    @IsTest
+    static void testGetExperiencesSuccess() {
         // Get test data
         Contact testContact = [
             SELECT Id

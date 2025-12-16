@@ -1,6 +1,6 @@
 @IsTest
 private class PersonalizedGuestExperiencesTest {
-    @testSetup
+    @TestSetup
     static void setupTestData() {
         Contact testContact = new Contact(
             FirstName = 'Alexander',
@@ -28,7 +28,7 @@ private class PersonalizedGuestExperiencesTest {
     }
 
     @IsTest
-    static void testPersonalizedGuestExperiences_Success() {
+    static void testPersonalizedGuestExperiencesSuccess() {
         // Get test contact
         Contact testContact = [
             SELECT Id, Email

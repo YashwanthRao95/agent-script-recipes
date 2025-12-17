@@ -11,7 +11,7 @@ variables:
 
 system:
    messages:
-      welcome: "Hi! I can help you create support cases."
+      welcome: "Hi! I can help you create support cases. If the user has an issue that requires support, please help them."
       error: "Something went wrong."
 
    instructions: "You are a support assistant."
@@ -33,22 +33,23 @@ topic case_management:
          description: "Creates a support case"
          inputs:
             subject: string
-            description: "Subject of the case"
+               description: "Subject of the case"
          outputs:
             case_number: string
-            description: "The created case number"
+               description: "The created case number"
          target: "flow://CreateCase"
 
    reasoning:
       instructions:->
          | If the user has an issue that requires support, please help them.
          
-           If not within business hours, create a support case by using {!@actions.create_case}. # Referencing the action directly guides the model to use it
-           Share the Case Number and when to expect follow-up ({!@variables.next_open_time}).    # and also provides context variables in the same prompt
-
+         if @variables.next_open_time:                                                           # Procedural if block checks the variable directly
+            | We are currently OUTSIDE business hours. Support opens at {!@variables.next_open_time}.
+              Create a support case using {!@actions.create_case} and share the Case Number.
+         else:
+            | We are currently WITHIN business hours. Support is available now.
+              Help the user resolve their issue directly.
       actions:
-         create_case: @actions.create_case
-            with subject=...
-            # We don't need to manually set variables if the model reads the output directly
-            # but usually good practice to do so.
+            create_case: @actions.create_case
+               with subject=...
 

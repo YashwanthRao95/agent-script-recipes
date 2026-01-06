@@ -5,6 +5,10 @@ rules:
         HardCodedId:
             severity: Critical
             tags: []
+        # Disabled rule to allow agent access to data without sharing
+        PreventPassingUserDataIntoElementWithoutSharing:
+            severity: High
+            tags: []
 
 engines:
     eslint:

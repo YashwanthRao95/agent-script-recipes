@@ -9,7 +9,7 @@ This recipe demonstrates **advanced state management** with complex data structu
 ```mermaid
 %%{init: {'theme':'neutral'}}%%
 graph TD
-    A[Agent Starts] --> B[Initialize Variables:<br/>tasks: list[object]<br/>user_stats: object<br/>next_task_id: 1]
+    A[Agent Starts] --> B["Initialize Variables:<br/>tasks: list[object]<br/>user_stats: object<br/>next_task_id: 1"]
     B --> C[start_agent routes to task_management]
     C --> D{User Request?}
     D -->|Add Task| E[Create Task Object]

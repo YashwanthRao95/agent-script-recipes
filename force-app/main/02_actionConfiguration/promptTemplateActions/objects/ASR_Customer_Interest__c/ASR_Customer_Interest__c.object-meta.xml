@@ -144,7 +144,7 @@
     <compactLayoutAssignment>SYSTEM</compactLayoutAssignment>
     <deploymentStatus>Deployed</deploymentStatus>
     <description
-    >Customer interests. Junction object for Contacts and ASR Activity interests.</description>
+    >Customer interests. Junction object for Contacts and Activity interests.</description>
     <enableActivities>false</enableActivities>
     <enableBulkApi>true</enableBulkApi>
     <enableFeeds>false</enableFeeds>
@@ -155,13 +155,13 @@
     <enableSharing>true</enableSharing>
     <enableStreamingApi>true</enableStreamingApi>
     <externalSharingModel>ControlledByParent</externalSharingModel>
-    <label>ASR Customer Interest</label>
+    <label>Customer Interest</label>
     <nameField>
         <displayFormat>A-{0000}</displayFormat>
         <label>Customer Interest Name</label>
         <type>AutoNumber</type>
     </nameField>
-    <pluralLabel>ASR Customer Interests</pluralLabel>
+    <pluralLabel>Customer Interests</pluralLabel>
     <searchLayouts />
     <sharingModel>ControlledByParent</sharingModel>
     <visibility>Public</visibility>

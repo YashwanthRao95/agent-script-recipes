@@ -154,12 +154,12 @@
     <enableSharing>true</enableSharing>
     <enableStreamingApi>true</enableStreamingApi>
     <externalSharingModel>Private</externalSharingModel>
-    <label>ASR Experience</label>
+    <label>Experience</label>
     <nameField>
-        <label>ASR Experience Name</label>
+        <label>Experience Name</label>
         <type>Text</type>
     </nameField>
-    <pluralLabel>ASR Experiences</pluralLabel>
+    <pluralLabel>Experiences</pluralLabel>
     <searchLayouts />
     <sharingModel>ReadWrite</sharingModel>
     <startsWith>Vowel</startsWith>

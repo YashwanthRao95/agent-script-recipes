@@ -7,8 +7,6 @@ config:
    agent_type: "AgentforceEmployeeAgent"
    description: "Collects user information through a survey using variables"
 
-# Variables block: Defines all state that the agent can read and modify
-# Variables are global across all topics in the agent
 variables:
    # String variable with default value
    # 'mutable' means the agent can change this value
@@ -23,31 +21,19 @@ variables:
    survey_completed: mutable boolean = False
       description: "Whether the user has completed all survey questions"
 
-   # List variable - stores multiple string values
-   # Empty list [] is the default for list types
    interests: mutable string = ""
-      description: "List of the user's interests and hobbies"
+      description: "User's interests and hobbies"
 
 system:
    messages:
       welcome: "Welcome! I'd like to learn a bit about you. Let's start with your name."
       error: "Sorry, I had trouble processing that. Let's try again."
 
-   instructions: "You are a friendly survey agent, that collects information from users based on predefined questions. Never ask anythings that is not asked through a tool. Be conversational and encouraging. Make the survey feel like a chat, not an interrogation."
+   instructions: "You are a friendly survey agent, that collects users name, age and interests. Be conversational and encouraging. Make the survey feel like a chat, not an interrogation."
 
-start_agent topic_selector:
-   description: "Welcome users and begin the survey process"
-   
-   reasoning:
-      instructions:|
-         Select the tool that best matches the user's message and conversation history. If it's unclear, make your best guess.
-      actions:
-         begin_survey: @utils.transition to @topic.survey
-            description: "Start collecting user information through the survey"
-            available when @variables.survey_completed == False
 
-topic survey:
-   description: "Collects user information and stores it in variables"
+start_agent survey:
+   description: "Collects user's Name, Age and Interests and save it in variables. Do not ask any other questions for the survey except for Name, Age and Interests"
 
    reasoning:
       instructions:->
@@ -57,33 +43,37 @@ topic survey:
            Current survey progress:
          if @variables.user_name:
             | - Name: {!@variables.user_name}
+               run set_user_name
          else:
             | - Name: Not provided
          
          if @variables.age > 0:
             | - Age: {!@variables.age}
+               run set_age
          else:
             | - Age: Not provided
          
          if @variables.interests:
             | - Interests: {!@variables.interests}
+               run set_interests
          else:
             | - Interests: Not provided
          
          | - Survey complete: {!@variables.survey_completed}
   
            Your task:
-           1. If user_name is empty, ask for their name
-           2. If age is 0, ask for their age
-           3. If interests list is empty, ask about their hobbies and interests
-           4. Once all information is collected, set survey_completed to True,
-              and respond to the user with a "Thank you". Also summarize the collected
+           1. Be natural and conversational. Don't ask all questions at once.
+           2. If user_name is empty, ask for their name
+           3. If age is 0, ask for their age
+           4. If interests list is empty, ask about their hobbies and interests
+           5. Once all information is collected respond to the user with a "Thank you". Also summarize the collected
               data for them.
-  
-           When you receive information:
-           - Store the name in user_name variable
-           - Store the age in age variable
-           - Store interests as a list in interests variable
-           - Mark survey_completed as True when all steps are done
-  
-           Be natural and conversational. Don't ask all questions at once.
+
+      actions: 
+         set_user_name: @utils.setVariables
+            with user_name=...
+         set_age: @utils.setVariables
+            with age=...
+         set_interests: @utils.setVariables
+            with interests=...
+            with survey_completed = True

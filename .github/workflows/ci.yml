@@ -112,6 +112,10 @@ jobs:
             - name: 'Create scratch org'
               run: sf org create scratch -f config/project-scratch-def.json -a scratch-org -d -y 1 -w 10
 
+            # Wait for scratch org to be fully ready
+            - name: 'Wait for scratch org initialization'
+              run: sleep 30
+
             # Assign Manage Prompt Template permission set
             - name: 'Assign Manage Prompt Template permission set'
               run: sf org assign permset -n EinsteinGPTPromptTemplateManager

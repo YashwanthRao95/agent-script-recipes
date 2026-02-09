@@ -248,7 +248,7 @@ User: Track my shipment 1Z999AA10123456784
 
 [Agent calls track_shipment via Flow]
   - TrackShipment flow with tracking_number and carrier="USPS"
-  - Returns: status object, estimated_delivery="2025-01-22"
+  - Returns: status="In Transit", estimated_delivery="2025-01-22"
 
 Agent: 📦 Shipment Status:
 

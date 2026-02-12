@@ -96,7 +96,6 @@ topic report_generation:
            - Output format
 
            Include the generated report link as full raw URL starting with https://, so it's clickable.
-
       actions:
          # Pattern 1: LLM slot-filling (...)
          # LLM extracts values from conversation

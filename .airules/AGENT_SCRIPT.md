@@ -329,16 +329,13 @@ When defining action output parameters, use the `object` type with a `complex_da
 
 **Primitive Types:**
 
-| `complex_data_type_name`  | Description                          |
-| ------------------------- | ------------------------------------ |
-| `lightning__stringType`   | Text values                          |
-| `lightning__textType`     | Text (similar to string)             |
-| `lightning__richTextType` | Rich formatted text (with citations) |
-| `lightning__integerType`  | Integer numbers                      |
-| `lightning__booleanType`  | True/false values                    |
-| `lightning__dateType`     | Date values                          |
-| `lightning__dateTimeType` | Date and time values                 |
-| `lightning__doubleType`   | Decimal/floating point numbers       |
+| `complex_data_type_name`  | Description                    |
+| ------------------------- | ------------------------------ |
+| `lightning__integerType`  | Integer numbers                |
+| `lightning__booleanType`  | True/false values              |
+| `lightning__dateType`     | Date values                    |
+| `lightning__dateTimeType` | Date and time values           |
+| `lightning__doubleType`   | Decimal/floating point numbers |
 
 **Complex Types:**
 

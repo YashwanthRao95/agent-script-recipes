@@ -9,236 +9,10 @@
         <visible>true</visible>
     </applicationVisibilities>
     <description>Grants access to the Agent Script Recipes app</description>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-AddToCart;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-AnalyzeBillingIssue;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-AnalyzeTechnicalIssue;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-AssessChurnRisk;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-AwardLoyaltyPoints;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-CalculateCustomerValue;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-CheckDependencies;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-ConfigureAccountSettings;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-CreateBooking;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-CreateCase;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-CreateCustomerAccount;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-CreateEscalationTicket;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-DeleteRecord;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-ExecuteTransfer;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-FetchAccountData;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-FetchOrderHistory;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-FetchSupportHistory;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-FetchUserProfile;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-FinalizeOnboarding;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-GenerateRecommendations;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-GenerateReport;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-GetAccountBalance;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-GetCurrentTimestamp;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-GetCurrentWeather;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-GetOrderStatus;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-GetProductInfo;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-GetRecommendations;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-GetWeatherForecast;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-LogEvent;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-LogTransaction;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-PerformSearch;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-ProcessPayment;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-SearchHotels;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-SendReceipt;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-SendVerificationEmail;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-SetupCustomerProfile;
-        </flow>
-    </flowAccesses>
-    <flowAccesses>
-        <enabled>true</enabled>
-        <flow>
-TrackShipment;
-        </flow>
-    </flowAccesses>
     <hasActivationRequired>false</hasActivationRequired>
     <label>Agent Script Recipes App</label>
     <tabSettings>
         <tab>ASR_Agent_Event_Log__c</tab>
-        <visibility>Visible</visibility>
-    </tabSettings>
-    <tabSettings>
-        <tab>ASR_Car_Rental__c</tab>
         <visibility>Visible</visibility>
     </tabSettings>
     <tabSettings>
@@ -262,19 +36,11 @@ TrackShipment;
         <visibility>Visible</visibility>
     </tabSettings>
     <tabSettings>
-        <tab>ASR_Flight_Booking__c</tab>
-        <visibility>Visible</visibility>
-    </tabSettings>
-    <tabSettings>
         <tab>ASR_Hotel_Booking__c</tab>
         <visibility>Visible</visibility>
     </tabSettings>
     <tabSettings>
         <tab>ASR_Hotel__c</tab>
-        <visibility>Visible</visibility>
-    </tabSettings>
-    <tabSettings>
-        <tab>ASR_Itinerary__c</tab>
         <visibility>Visible</visibility>
     </tabSettings>
     <tabSettings>
@@ -291,14 +57,6 @@ TrackShipment;
     </tabSettings>
     <tabSettings>
         <tab>ASR_Shopping_Cart__c</tab>
-        <visibility>Visible</visibility>
-    </tabSettings>
-    <tabSettings>
-        <tab>ASR_Survey_Log__c</tab>
-        <visibility>Visible</visibility>
-    </tabSettings>
-    <tabSettings>
-        <tab>ASR_Task__c</tab>
         <visibility>Visible</visibility>
     </tabSettings>
     <tabSettings>

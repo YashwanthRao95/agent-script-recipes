@@ -366,8 +366,9 @@ actions:
          customer_id: string
             description: "The customer's Salesforce record ID"
       outputs:
-         success: boolean
+         success: object
             description: "Whether the lookup was successful"
+            complex_data_type_name: "lightning__booleanType"
          order_count: object
             description: "Total number of orders found"
             complex_data_type_name: "lightning__integerType"

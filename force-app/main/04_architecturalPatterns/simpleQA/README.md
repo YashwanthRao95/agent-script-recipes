@@ -183,14 +183,14 @@ Agent: Hi! I'm here to answer your questions about our products and services. Wh
 User: What features does Product Laptop X200 include?
 
 [Agent calls get_product_info with product_name="Product X"]
-[Returns: product_details="...", price=299, in_stock=true]
+[Returns: product_details="...", price=1200, in_stock=true]
 
 Agent: Product X includes several great features:
        - Feature A: [description]
        - Feature B: [description]
        - Feature C: [description]
 
-       It's currently priced at $299 and is in stock. Would you like to know more about any specific feature?
+       It's currently priced at $1200 and is in stock. Would you like to know more about any specific feature?
 ```
 
 ### Example Interaction 2: Pricing Question
@@ -199,21 +199,21 @@ Agent: Product X includes several great features:
 User: How much does the wireless mouse cost?
 
 [Agent calls get_product_info with product_name="Product Y"]
-[Returns: price=149, in_stock=true]
+[Returns: price=25, in_stock=true]
 
-Agent: Product Y is priced at $149 and is currently in stock.
+Agent: Product Y is priced at $25 and is currently in stock.
        Would you like to know about its features or compare it to other products?
 ```
 
 ### Example Interaction 3: Availability Check
 
 ```text
-User: Is the wireless mouse available?
+User: Is the 4K Monitor available?
 
-[Agent calls get_product_info with product_name="Premium Widget"]
+[Agent calls get_product_info with product_name="4K Monitor"]
 [Returns: in_stock=false]
 
-Agent: I'm sorry, the Premium Widget is currently out of stock.
+Agent: I'm sorry, the 4K Monitor is currently out of stock.
        Would you like me to let you know when it's available, or can I suggest some similar products?
 ```
 

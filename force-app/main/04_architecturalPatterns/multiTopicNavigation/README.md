@@ -222,25 +222,23 @@ Agent: Welcome to our hotel booking service! I can help you browse hotels, make 
 
 User: I need a hotel in San Francisco for March 15-17
 
-[Agent calls search_hotels action]
-[Stores: check_in_date="2025-03-15", check_out_date="2025-03-17"]
+[Agent calls search_hotels action with: check_in_date="2026-03-15", check_out_date="2026-03-17", location:"San Francisco"]
 
 Agent: I found several hotels in San Francisco for March 15-17:
-       1. Bay View Hotel - $180/night
-       2. Downtown Plaza - $150/night
-       3. Airport Inn - $100/night
+       1. Grand Plaza
+       2. Seaside Resort
 
        Which one interests you?
 
-User: I'll take the Bay View Hotel
+User: I'll take the Grand Plaza
 
-Agent: Excellent choice! Let me help you book the Bay View Hotel.
+Agent: Excellent choice! Let me help you book the Grand Plaza Hotel.
 ```
 
 **[Agent calls search_hotels action → transitions to hotel_booking]**
 
 ```text
-Agent: I'm ready to complete your booking at Bay View Hotel.
+Agent: I'm ready to complete your booking at Grand Plaza Hotel.
        - Check-in: March 15
        - Check-out: March 17
 
@@ -249,7 +247,7 @@ Agent: I'm ready to complete your booking at Bay View Hotel.
 User: Yes, that's correct
 
 [Agent calls create_booking action]
-[Stores: hotel_name="Bay View Hotel", booking_id="BK789456"]
+[Stores: hotel_name="Grand Plaza Hotel", booking_id="BK789456"]
 [Auto-transitions to hotel_confirmation]
 ```
 
@@ -260,7 +258,7 @@ Agent: Your booking is confirmed! 🎉
 
        Confirmation details:
        - Booking ID: BK789456
-       - Hotel: Bay View Hotel
+       - Hotel: Grand Plaza Hotel
        - Check-in: March 15
        - Check-out: March 17
 

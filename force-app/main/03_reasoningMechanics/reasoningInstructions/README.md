@@ -229,31 +229,31 @@ Agent: I'd be happy to help you check your order! Could you please provide your 
 ### Example: Order ID Provided, Fetch Status
 
 ```text
-User: My order number is 00000100
+User: My order number is O-0000
 
 [Procedure runs:]
 run @actions.get_order_status
-   with order_id="00000100"
+   with order_id="O-0000"
    → Returns: status="shipped", tracking_number="1Z999..."
 
 if @variables.order_status == "shipped":
    | The order has been shipped! Provide tracking {!@variables.tracking_number}
 
-Agent: Great news! Your order 00000100 has shipped. Your tracking number is 1Z999...
+Agent: Great news! Your order O-0001 has shipped. Your tracking number is 1Z999...
        You can track your package at the carrier's website. It should arrive in 2-3 business days.
 ```
 
 ### Example: Delivered Order
 
 ```text
-User: Has it arrived?
+User: Has O-0001 order arrived?
 
 [Procedure runs - status updated to "delivered"]
 
 if @variables.order_status == "delivered":
    | The order was delivered. Confirm they received it.
 
-Agent: Yes! According to our records, order 00000100 was delivered yesterday.
+Agent: Yes! According to our records, order O-0001 was delivered yesterday.
        Did you receive the package? Is everything satisfactory?
 ```
 

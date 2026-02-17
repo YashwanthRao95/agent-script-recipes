@@ -195,7 +195,7 @@ Agent: [technical_specialist topic]
        [Transitions back to general_support topic]
 
        Our technical specialist recommends trying to reboot your system as a first step.
-       
+
        If the issue persists after rebooting, please let me know so we can investigate further.
 ```
 
@@ -216,9 +216,9 @@ Agent: [billing_specialist topic]
        [Transitions back to general_support topic]
 
        Your billing issue has been reviewed.
-       
+
        If you were indeed charged twice, a refund process has been initiated.
-       
+
        If you need further details or confirmation, please let me know.
 ```
 

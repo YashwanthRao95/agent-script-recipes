@@ -65,6 +65,9 @@ start_agent topic_selector:
    description: "Welcome users and determine the appropriate topic based on user input"
 
    reasoning:
+      instructions:|
+         Select the tool that best matches the user's message and conversation history. If it's unclear, make your best guess.
+
       actions:
          general_mode: @utils.transition to @topic.general
             description: "Use general casual and friendly mode"
@@ -89,7 +92,15 @@ topic general:
        instructions: ->
            | Display the below message
              "I'm in general mode - casual and friendly!"
-            ...
+             "I can switch to:"
+             "- Professional mode (for business)"
+             "- Technical mode (for tech support)"
+             "- Creative mode (for brainstorming)"
+             "What mode would you like to switch to?"
+
+             Rules:
+             If the user does not specify a mode, stay in general mode.
+             Depending on the user's response, switch to the appropriate mode using {!@actions.go_professional}, {!@actions.go_technical}, or {!@actions.go_creative}.
 
        actions:
            go_professional: @utils.transition to @topic.professional
@@ -204,12 +215,7 @@ topic creative:
 ```text
 [start_agent routes to general topic]
 
-Agent: I'm in general mode - casual and friendly!
-       I can switch to:
-       - Professional mode (for business)
-       - Technical mode (for tech support)
-       - Creative mode (for brainstorming)
-       What mode would you like?
+Agent: Welcome! I adapt my behavior based on the conversation context.
 
 User: Switch to professional mode
 

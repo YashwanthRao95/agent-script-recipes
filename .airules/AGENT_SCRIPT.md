@@ -770,7 +770,31 @@ Before finalizing an Agent Script, verify:
        set @variables.result = @outputs.result
     ```
 
-8. **Using `@inputs` in `set` directives (causes unknown deploy error):**
+8. **Referencing actions by bare name instead of `@actions.`:**
+
+    Always use `@actions.action_name` when referencing actions — in `run` statements, template expressions `{!...}`, and instruction text. Never use the bare action name.
+
+    ```agentscript
+    # WRONG - bare action name in run statement
+    run set_user_name
+
+    # CORRECT
+    run @actions.set_user_name
+
+    # WRONG - bare action name in instruction text
+    | Add items to the cart using add_to_cart
+
+    # CORRECT
+    | Add items to the cart using {!@actions.add_to_cart}
+
+    # WRONG - bare action name in instructions referencing a reasoning action
+    | If continuing a conversation, route to begin_data_management.
+
+    # CORRECT
+    | If continuing a conversation, route to {!@actions.begin_data_management}.
+    ```
+
+9. **Using `@inputs` in `set` directives (causes unknown deploy error):**
 
     ```agentscript
     # WRONG - @inputs in set causes unknown error at deploy time

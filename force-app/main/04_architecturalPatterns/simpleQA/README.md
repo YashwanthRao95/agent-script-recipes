@@ -81,14 +81,14 @@ System instructions define:
 reasoning:
    instructions:->
       | Answer the user's questions about products and services clearly and accurately.
-        When the user asks about a specific product, use the get_product_info action
+        When the user asks about a specific product, use {!@actions.get_product_info}
         to look up current information.
 
         When answering:
         - Be specific and provide helpful details
         - If the question is unclear, ask for clarification
         - Stay focused on product-related topics
-        - Use get_product_info to get accurate, up-to-date information
+        - Use {!@actions.get_product_info} to get accurate, up-to-date information
 
         Topics you can help with:
         - Product features and specifications
@@ -109,8 +109,9 @@ actions:
       outputs:
          product_details: string
             description: "Detailed product information including features, specifications, and description"
-         price: number
+         price: object
             description: "Current price of the product"
+            complex_data_type_name: "lightning__currencyType"
          in_stock: boolean
             description: "Indicates whether the product is currently in stock and available"
       target: "flow://GetProductInfo"
@@ -132,24 +133,25 @@ topic product_qa:
                description: "Name of the product to look up information for"
          outputs:
             product_details: string
-               description: "Detailed product information"
-            price: number
+               description: "Detailed product information including features, specifications, and description"
+            price: object
                description: "Current price of the product"
+               complex_data_type_name: "lightning__currencyType"
             in_stock: boolean
-               description: "Whether the product is in stock"
+               description: "Indicates whether the product is currently in stock and available"
          target: "flow://GetProductInfo"
 
    reasoning:
       instructions:->
          | Answer the user's questions about products and services clearly and accurately.
-           When the user asks about a specific product, use the get_product_info action
+           When the user asks about a specific product, use {!@actions.get_product_info}
            to look up current information.
 
            When answering:
            - Be specific and provide helpful details
            - If the question is unclear, ask for clarification
            - Stay focused on product-related topics
-           - Use get_product_info to get accurate, up-to-date information
+           - Use {!@actions.get_product_info} to get accurate, up-to-date information
 
            Topics you can help with:
            - Product features and specifications
@@ -223,7 +225,7 @@ Agent: I'm sorry, the 4K Monitor is currently out of stock.
 
 **Good instructions are:**
 
-- **Specific**: "Use get_product_info to look up current information"
+- **Specific**: "Use {!@actions.get_product_info} to look up current information"
 - **Actionable**: Clear guidance on when to use tools
 - **Structured**: Use bullet points and sections
 

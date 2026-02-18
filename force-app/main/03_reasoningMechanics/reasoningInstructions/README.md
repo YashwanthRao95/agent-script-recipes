@@ -113,6 +113,7 @@ instructions:->
       | The order has been shipped! Provide:
         Tracking number: {!@variables.tracking_number}
         Estimated delivery date from order details
+        Remind them to check delivery address
 
    if @variables.order_status == "delivered":
       | The order was delivered.
@@ -165,6 +166,10 @@ topic order_status:
          if @variables.order_status:
             | The customer's order {!@variables.order_id} has status: {!@variables.order_status}
 
+         if @variables.order_id and not @variables.order_status:
+            | No order was found for order ID {!@variables.order_id}.
+              Ask the customer to verify the order number and try again.
+
          if @variables.order_status == "pending":
             | The order is being processed. Let the customer know:
               Order is confirmed and being prepared
@@ -175,7 +180,6 @@ topic order_status:
             | The order has been shipped! Provide:
               Tracking number: {!@variables.tracking_number}
               Estimated delivery date from order details
-              Link to track shipment
               Remind them to check delivery address
 
          if @variables.order_status == "delivered":

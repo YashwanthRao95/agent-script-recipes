@@ -50,9 +50,15 @@ start_agent topic_selector:
    description: "Welcome users and determine their hotel service needs"
 
    reasoning:
+      instructions:|
+         Select the tool that best matches the user's message and conversation history. If it's unclear, make your best guess.
+         Route to the matching topic immediately based on the user's message.
       actions:
          browse_hotels: @utils.transition to @topic.hotel_browse
             description: "Browse and search for available hotels"
+
+         hotel_booking: @utils.transition to @topic.hotel_booking
+            description: "Book a hotel"
 
          view_booking: @utils.transition to @topic.hotel_confirmation
             description: "View existing booking confirmations"
@@ -62,7 +68,7 @@ topic hotel_browse:
    description: "Browse available hotels and view information"
 
 topic hotel_booking:
-   description: "Handle hotel booking and reservation"
+   description: "Book hotel"
 
 topic hotel_confirmation:
    description: "Confirm booking and provide details"
@@ -131,30 +137,29 @@ topic hotel_browse:
 
    reasoning:
       instructions:->
-         | Help users find the perfect hotel using {!@actions.search_hotels}.
+         | Help users find the perfect hotel.
 
-           Ensure to ask the user for:
-           - location
+           Ensure you know:
+           - desired hotel location
            - check-in date
            - check-out date
 
-           Do not ask for other booking details.
+           Once you have this information, look for available hotels using {!@actions.search_hotels}.
 
-           If you find available hotels provide the user the hotel information.
+           Show the results to the user and ask which hotel they would like to book.
 
       actions:
          search_hotels: @actions.search_hotels
             with location=...
             with check_in=...
             with check_out=...
-            transition to @topic.hotel_booking
 ```
 
 ### Complete Topic: Hotel Booking
 
 ```agentscript
 topic hotel_booking:
-   description: "Handle hotel booking and reservation"
+   description: "Book hotel"
 
    actions:
       create_booking:
@@ -175,13 +180,29 @@ topic hotel_booking:
 
    reasoning:
       instructions:->
-         | Complete the booking for the customer using {!@actions.create_booking}.
+         | First, if the hotel name, check-in date, or check-out date are not yet saved, use {!@actions.collect_booking_info} to save them from the conversation.
+
+           Then confirm the booking details with the user before creating the reservation.
+
+           Show:
+           - Hotel: {!@variables.hotel_name}
+           - Check-in: {!@variables.check_in_date}
+           - Check-out: {!@variables.check_out_date}
+
+           Ask the user to confirm these details are correct.
+           Once the user confirms, complete the booking using {!@actions.create_booking}.
 
       actions:
-         create_booking: @actions.create_booking
+         collect_booking_info: @utils.setVariables
+            description: "Save the hotel name and travel dates from the conversation"
             with hotel_name=...
-            with check_in=...
-            with check_out=...
+            with check_in_date=...
+            with check_out_date=...
+
+         create_booking: @actions.create_booking
+            with hotel_name=@variables.hotel_name
+            with check_in=@variables.check_in_date
+            with check_out=@variables.check_out_date
             set @variables.booking_id = @outputs.booking_id
             set @variables.booking_confirmed = @outputs.success
             transition to @topic.hotel_confirmation
@@ -195,7 +216,7 @@ topic hotel_confirmation:
 
    reasoning:
       instructions:->
-         | The booking has been confirmed!
+         | Confirm the booking and provide its details to the user.
 
            Confirmation details:
            - Booking ID: {!@variables.booking_id}
@@ -203,8 +224,8 @@ topic hotel_confirmation:
            - Check-in: {!@variables.check_in_date}
            - Check-out: {!@variables.check_out_date}
 
-           Provide these details to the customer and ask if they need anything else.
-           If they want to make another booking, use start_new_booking action.
+           Ask if they need anything else.
+           If they want to make another booking, use {!@actions.start_new_booking} action.
 
       actions:
          start_new_booking: @utils.transition to @topic.hotel_browse

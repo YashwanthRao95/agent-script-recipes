@@ -13,12 +13,13 @@ config:
     agent_label: "PromptTemplateActions"
     agent_type: "AgentforceEmployeeAgent"
     description: "Provides guidance to guests by creating personalized schedules."
+
 start_agent topic_selector:
     description: "Welcome users and begin providing personalized scheduling guidance."
 
     reasoning:
         instructions:|
-            Select the tool that best matches the user's message and conversation history. If it's unclear, make your best guess.
+            Always navigate to schedule generation immediately without asking the user any questions.
         actions:
             generate_schedule: @utils.transition to @topic.schedule_generation
                 description: "Create personalized schedules"
@@ -30,18 +31,18 @@ topic schedule_generation:
         instructions: ->
             | When a user asks for help scheduling their day or creating a personalized schedule:
             | 1. Ask for their email address
-            | 2. When you have the email address, run {!@actions.Generate_Personalized_Schedule}
+            | 2. When you have the email address, run {!@actions.generate_personalized_schedule}
             | 3. Output the personalized schedule in a message
             | 
             | Never ask about goals, preferences, or interests.
             | If the user does not provide an email address, ask for it again.
 
         actions:
-            Generate_Personalized_Schedule: @actions.Generate_Personalized_Schedule
+            generate_personalized_schedule: @actions.generate_personalized_schedule
                 with "Input:email" = ...
 
     actions:
-        Generate_Personalized_Schedule:
+        generate_personalized_schedule:
           description: "Generate a personalized schedule with a prompt template. This action automatically generates a personalized schedule that matches the guest's goals, preferences, or interests by retrieving that information from Salesforce using their email address. This action requires the user's email address."
           inputs:
           # Prompt Template inputs follow pattern, "Input:<Field API Name>"

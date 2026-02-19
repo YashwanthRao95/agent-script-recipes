@@ -20,7 +20,7 @@ start_agent context_gate  →  collects number_of_employees
 | Concept | Where |
 |---|---|
 | Pre-flight context gate | `context_gate` intercepts the first message, never answers |
-| Instant transition on collect | `transition to @topic.dispatcher` suffix on `collect_employee_count` |
+| Two-step gate transition | `collect_employee_count` stores value; `route_to_dispatcher` (gated by `available when > 0`) transitions |
 | Shared variable across all topics | `number_of_employees` declared at the top level |
 | Intent-based routing | `dispatcher` picks a topic from labelled `@utils.transition` actions |
 | Specialist topics returning to hub | Every specialist ends with `transition to @topic.dispatcher` |
@@ -36,7 +36,7 @@ Agent → [context_gate]
 
 User  → "Around 120."
 
-Agent → [collect_employee_count: stores 120 → transition to dispatcher]
+Agent → [collect_employee_count: stores 120] [route_to_dispatcher: transitions]
         [dispatcher: sees unanswered product question → routes to product_advisor]
         [product_advisor]
          "For a 120-person team I'd recommend the mid-market Growth plan — it
@@ -67,15 +67,21 @@ Agent → [off_topic: → return_to_dispatcher]
 
 ## Key mechanics
 
-### 1. Instant gate-to-dispatcher transition
+### 1. Gate-to-dispatcher transition (two actions, not one)
+
+`transition to @topic.xxx` as a suffix is only valid on `@actions.xxx` (custom Flow/Apex actions), **not** on `@utils.setVariables`. The fix is two separate actions called in sequence:
 
 ```yaml
+# Step 1 — store the value
 collect_employee_count: @utils.setVariables
    with number_of_employees=...
-   transition to @topic.dispatcher
+
+# Step 2 — transition (only available after step 1 stores a positive value)
+route_to_dispatcher: @utils.transition to @topic.dispatcher
+   available when @variables.number_of_employees > 0
 ```
 
-The variable is written and control passes to `dispatcher` in the same turn — no extra round-trip.
+The `available when` guard prevents `route_to_dispatcher` from appearing in the tool list until the count is stored. The instructions explicitly tell the LLM to call both in sequence, so the hand-off happens in the same turn.
 
 ### 2. Intent-based routing in the dispatcher
 

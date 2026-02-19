@@ -20,8 +20,11 @@
 #   product_advisor  escalation   off_topic
 #
 # Key mechanics:
-#   • 'transition to @topic.dispatcher' on collect_employee_count means
-#     the hand-off from gate → dispatcher is instant (same turn).
+#   • 'transition to @topic.xxx' as a suffix is only valid on @actions.xxx
+#     (custom Flow/Apex actions), NOT on @utils.setVariables.
+#     So context_gate uses TWO separate actions: collect_employee_count to
+#     store the value, then route_to_dispatcher (available when > 0) to
+#     transition. The instructions tell the LLM to call both in sequence.
 #   • The dispatcher's routing actions have clear descriptions so the LLM
 #     can pick the right one for ANY message, including the original
 #     unanswered question that triggered the pre-flight collection.
@@ -58,6 +61,13 @@ system:
 # Intercepts the very first user message.
 # Asks for company size, stores it, then hands off to the dispatcher.
 # This topic is never re-entered — once the variable is set it stays set.
+#
+# NOTE: 'transition to @topic.xxx' can only be a suffix on @actions.xxx
+# (custom Flow/Apex actions). It is NOT supported on @utils.setVariables.
+# The solution is two separate actions called in sequence:
+#   1. collect_employee_count — writes the variable
+#   2. route_to_dispatcher    — transitions (gated by 'available when > 0'
+#                               so it can only fire after step 1)
 start_agent context_gate:
    description: "Collects company size before anything else, then routes to the dispatcher"
 
@@ -69,15 +79,20 @@ start_agent context_gate:
            "Before I answer, could you quickly tell me how many employees
             your company has? This helps me give you the most relevant
             recommendation."
-         Once the user provides a number, call collect_employee_count.
+         Once the user provides a number:
+           1. Call collect_employee_count to store it.
+           2. Immediately call route_to_dispatcher to hand off.
 
       actions:
-         # Stores the count AND immediately hands off to dispatcher.
-         # The dispatcher will then route the original (unanswered) question
-         # to the right specialist topic — no extra turn needed.
+         # Step 1 — store the value.
          collect_employee_count: @utils.setVariables
             with number_of_employees=...
-            transition to @topic.dispatcher
+
+         # Step 2 — transition to the dispatcher.
+         # 'available when' ensures this action only appears in the tool list
+         # after step 1 has stored a positive value, preventing premature firing.
+         route_to_dispatcher: @utils.transition to @topic.dispatcher
+            available when @variables.number_of_employees > 0
 
 # ── Hub ────────────────────────────────────────────────────────────────────────
 # The permanent routing centre. Every specialist topic returns here when done,

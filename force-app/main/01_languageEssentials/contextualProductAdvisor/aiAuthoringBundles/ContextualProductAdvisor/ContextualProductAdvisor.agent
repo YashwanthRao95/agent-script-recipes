@@ -73,15 +73,20 @@ start_agent context_gate:
 
    reasoning:
       instructions:|
-         The user has sent their first message.
-         Do NOT answer their question here — that is the dispatcher's job.
-         Respond with exactly this prompt:
-           "Before I answer, could you quickly tell me how many employees
-            your company has? This helps me give you the most relevant
-            recommendation."
-         Once the user provides a number:
-           1. Call collect_employee_count to store it.
-           2. Immediately call route_to_dispatcher to hand off.
+         IF @variables.number_of_employees == 0:
+           The employee count has NOT been collected yet.
+           Do NOT answer their question here — that is the dispatcher's job.
+           Respond with exactly this prompt:
+             "Before I answer, could you quickly tell me how many employees
+              your company has? This helps me give you the most relevant
+              recommendation."
+           Once the user provides a number:
+             1. Call collect_employee_count to store it.
+             2. Immediately call route_to_dispatcher to hand off.
+
+         IF @variables.number_of_employees > 0:
+           The employee count is already stored — do NOT ask for it again.
+           Immediately call route_to_dispatcher to hand off.
 
       actions:
          # Step 1 — store the value.

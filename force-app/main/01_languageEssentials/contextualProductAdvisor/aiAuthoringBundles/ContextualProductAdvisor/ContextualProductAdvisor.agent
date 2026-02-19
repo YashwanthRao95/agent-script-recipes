@@ -1,35 +1,37 @@
-# ContextualProductAdvisor - Pre-flight Context Collection
-# Demonstrates the "intercept-then-answer" pattern:
+# ContextualProductAdvisor - Pre-flight Context Collection with Immediate Topic Transition
+# Demonstrates the "intercept → collect → hand off" pattern:
 #
-#   When the user sends their first message, the agent does NOT answer
-#   immediately. Instead it collects one key piece of context
-#   (number of employees) and only then answers the original question —
-#   and every subsequent question — with that context baked in.
+#   Topic 1 — context_gate (start_agent)
+#     The entry point. Never answers product questions directly.
+#     Its sole job is to ask for company size and, the moment it is
+#     provided, fire 'collect_employee_count' which stores the value
+#     AND immediately transitions to the product_advisor topic.
 #
-# Why this pattern?
-#   Some answers differ significantly depending on the customer profile.
-#   Collecting company size once at the start lets the agent give
-#   consistently relevant, personalised responses without ever asking again.
+#   Topic 2 — product_advisor
+#     Receives control right after the number is stored.
+#     Looks back at the conversation, finds the user's original
+#     unanswered question, and answers it — and every follow-up —
+#     tailored to the stored company size.
 #
 # Key mechanics:
-#   1. A single mutable variable tracks whether context has been collected.
-#   2. The 'available when' guard on collect_employee_count ensures the
-#      action is offered exactly once (while the value is still 0).
-#   3. The instructions block has two clear states — "not collected" and
-#      "collected" — so the LLM always knows what it should do next.
-#   4. The LLM uses conversation history to recall the user's original
-#      question and answer it after the context is provided.
+#   • 'transition to @topic.product_advisor' on the collect action
+#     means the hand-off is instant: no extra turn, no re-prompting.
+#   • Variables are shared across topics, so number_of_employees is
+#     immediately visible to product_advisor after it is set.
+#   • The product_advisor topic has no way back to context_gate, so
+#     company size is never asked again for the rest of the session.
 
 config:
    agent_name: "ContextualProductAdvisor"
    agent_label: "ContextualProductAdvisor"
    agent_type: "AgentforceEmployeeAgent"
-   description: "Answers product questions tailored to company size, collected once before the first answer"
+   description: "Collects company size once, then answers all product questions tailored to that size"
 
 variables:
-   # The only piece of context we need up-front.
-   # Default 0 = "not yet collected".  Once set to any positive value,
-   # the collect_employee_count action is gated out permanently.
+   # Shared across both topics.
+   # Default 0 = "not yet collected".
+   # Once set to any positive value the context_gate topic is left
+   # behind permanently and will never be re-entered.
    number_of_employees: mutable number = 0
       description: "Number of employees in the user's company, used to personalise every product answer"
 
@@ -41,54 +43,56 @@ system:
    instructions: >
       You are a knowledgeable product advisor.
       Answer product questions accurately and concisely.
-      Always tailor your recommendations to the user's company size:
+      Always tailor recommendations to the user's company size:
         - Small business  (fewer than 50 employees) : ease of setup, low cost, self-service features.
         - Mid-market      (50 – 500 employees)       : team collaboration, integrations, admin controls.
         - Enterprise      (more than 500 employees)  : security, SLAs, dedicated support, scalability.
 
-start_agent product_advisor:
-   description: "Answers product questions, first collecting company size to personalise every response"
+# ── Topic 1: Gate ──────────────────────────────────────────────────────────────
+# Entry point. Asks for company size and transitions away the moment it is given.
+# It never answers a product question — that is entirely the job of product_advisor.
+start_agent context_gate:
+   description: "Intercepts the first message, collects company size, then hands off to the product advisor"
+
+   reasoning:
+      instructions:|
+         The user has just sent a message.
+         Do NOT answer their product question here.
+         Respond with exactly this:
+           "Before I answer, could you quickly tell me how many employees
+            your company has? This helps me give you the most relevant
+            recommendation."
+         Wait for their answer, then call collect_employee_count.
+
+      actions:
+         # Stores the employee count AND immediately transitions to product_advisor.
+         # The 'transition to' suffix fires after the variable is written,
+         # so product_advisor receives control in the very same turn —
+         # no extra round-trip, no intermediate agent response.
+         collect_employee_count: @utils.setVariables
+            with number_of_employees=...
+            transition to @topic.product_advisor
+
+# ── Topic 2: Advisor ───────────────────────────────────────────────────────────
+# Permanent home for the rest of the conversation.
+# number_of_employees is already populated when this topic is entered.
+topic product_advisor:
+   description: "Answers product questions personalised to the user's company size"
 
    reasoning:
       instructions:->
-         |
-           You are a product advisor. Help the user with their product questions.
+         | You are a product advisor.
+           Company size: {!@variables.number_of_employees} employees.
 
-           === Company context ===
-         if @variables.number_of_employees == 0:
-            |
-              Company size: NOT YET KNOWN
+           Tailor every answer to their company size:
+           - Fewer than 50   → ease of setup, affordability, self-service features
+           - 50 to 500       → team collaboration, integrations, admin controls
+           - More than 500   → enterprise security, SLAs, dedicated support, scalability
 
-              The user has just sent a message.
-              Do NOT answer their product question yet.
-              Instead, respond with exactly this:
-                "Before I answer, could you quickly tell me how many employees
-                 your company has? This helps me give you the most relevant
-                 recommendation."
+           You have just received control from the context_gate topic.
+           The user asked a product question before you had their company size.
+           Look back at the conversation, find their original unanswered question,
+           and answer it now — incorporating the {!@variables.number_of_employees}-employee context.
 
-              Wait for their answer, then call collect_employee_count.
-         else:
-            |
-              Company size: {!@variables.number_of_employees} employees
-
-              Use this company size to personalise every answer:
-                - Fewer than 50   → ease of setup, affordability, self-service
-                - 50 to 500       → collaboration tools, integrations, admin controls
-                - More than 500   → enterprise security, SLAs, dedicated support, scalability
-
-              If the user's first question was never answered because you
-              interrupted to collect company size, answer it now using the
-              company-size context above.
-
-              For all future questions in this conversation, answer directly —
-              never ask for company size again, it is already stored.
-
-      actions:
-         # ── Context collector ──────────────────────────────────────────────────
-         # 'available when' gates this action to fire ONLY while employee count
-         # is still unknown.  Once the user supplies a number, the condition
-         # becomes false and this action is never triggered again — so the
-         # question is asked exactly once, no matter how long the chat runs.
-         collect_employee_count: @utils.setVariables
-            available when @variables.number_of_employees == 0
-            with number_of_employees=...
+           For all follow-up questions in this session, answer directly.
+           Never ask for company size again — it is already stored.

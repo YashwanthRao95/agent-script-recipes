@@ -1,88 +1,138 @@
 # ContextualProductAdvisor
 
-Demonstrates the **intercept → collect → hand off** pattern using two topics:
+Combines **pre-flight context collection** with **dynamic topic routing**:
 
-1. **`context_gate`** (start topic) — never answers a product question; its only job is to collect company size and immediately transition away.
-2. **`product_advisor`** — answers every question for the rest of the session, always using company size as context.
+1. **`context_gate`** (start topic) — collects company size once, then hands off to the dispatcher.
+2. **`dispatcher`** (hub) — routes every message to the right specialist topic based on intent.
+3. **`product_advisor`**, **`escalation`**, **`off_topic`** — specialist topics that answer and return to the dispatcher.
 
-The hand-off is **instant**: `transition to @topic.product_advisor` is attached directly to the `collect_employee_count` action, so the advisor topic receives control in the same turn the number is stored — no extra round-trip, no intermediate response.
+```
+start_agent context_gate  →  collects number_of_employees
+       ↓ (instant transition on collect)
+ topic dispatcher          →  routes each message by intent
+       ↓                ↑  (all specialists return here)
+ ┌──────────────┬────────────┬───────────┐
+ product_advisor  escalation   off_topic
+```
 
 ## What this recipe shows
 
 | Concept | Where |
 |---|---|
-| Pre-flight context gate | `context_gate` start topic intercepts the first message |
-| Immediate topic transition | `transition to @topic.product_advisor` on the collect action |
-| Shared variables across topics | `number_of_employees` declared at the top level, visible in both topics |
-| One-way hand-off (no return) | `product_advisor` has no transition back — company size is never asked again |
-| Conversation history recall | `product_advisor` instructions tell the LLM to find and answer the original question |
+| Pre-flight context gate | `context_gate` intercepts the first message, never answers |
+| Instant transition on collect | `transition to @topic.dispatcher` suffix on `collect_employee_count` |
+| Shared variable across all topics | `number_of_employees` declared at the top level |
+| Intent-based routing | `dispatcher` picks a topic from labelled `@utils.transition` actions |
+| Specialist topics returning to hub | Every specialist ends with `transition to @topic.dispatcher` |
+| Company size never re-asked | `context_gate` is never re-entered; variable persists for the session |
 
 ## Conversation flow
 
 ```
-User  → "What pricing plan would suit us best?"
+User  → "What pricing plan suits us best?"
 
-Agent → [context_gate active]
-         "Before I answer, could you quickly tell me how many employees
-          your company has? This helps me give you the most relevant
-          recommendation."
+Agent → [context_gate]
+         "Before I answer, how many employees does your company have?"
 
 User  → "Around 120."
 
-Agent → [collect_employee_count fires: stores 120, transitions to product_advisor]
-        [product_advisor now active — answers immediately in the same turn]
-         "For a 120-person team you're right in mid-market territory.
-          I'd recommend our Growth plan: it covers the admin controls and
-          integrations a team your size typically needs, and…"
+Agent → [collect_employee_count: stores 120 → transition to dispatcher]
+        [dispatcher: sees unanswered product question → routes to product_advisor]
+        [product_advisor]
+         "For a 120-person team I'd recommend the mid-market Growth plan — it
+          covers the admin controls and integrations a team your size typically needs."
 
-User  → "Does it integrate with Slack?"
+User  → "This is taking too long, I need to speak to someone."
 
-Agent → [product_advisor, number_of_employees = 120 — no re-prompting]
-         "Yes — for a team your size the Slack integration is especially
-          valuable because…"
+Agent → [product_advisor: off-domain → return_to_dispatcher]
+        [dispatcher: complaint → escalation]
+        [escalation]
+         "I'm sorry to hear that. Let me connect you with your account manager."
+
+User  → "What's the weather like today?"
+
+Agent → [escalation: off-domain → return_to_dispatcher]
+        [dispatcher: off-topic → off_topic]
+        [off_topic]
+         "That's a bit outside what I can help with here — is there anything
+          about our products I can assist you with?"
+
+User  → "Yes, does the Enterprise plan include SSO?"
+
+Agent → [off_topic: → return_to_dispatcher]
+        [dispatcher: product question → product_advisor]
+        [product_advisor — number_of_employees still 120]
+         "Yes, SSO is included in the Enterprise plan. For a team your size…"
 ```
 
 ## Key mechanics
 
-### Instant transition on collect
+### 1. Instant gate-to-dispatcher transition
 
 ```yaml
 collect_employee_count: @utils.setVariables
    with number_of_employees=...
-   transition to @topic.product_advisor
+   transition to @topic.dispatcher
 ```
 
-`transition to` is a suffix on the action, not a separate step. The variable is written first, then control passes to `product_advisor` — all within the same turn.
+The variable is written and control passes to `dispatcher` in the same turn — no extra round-trip.
 
-### Variables shared across topics
+### 2. Intent-based routing in the dispatcher
 
 ```yaml
-variables:
-   number_of_employees: mutable number = 0
+topic dispatcher:
+   reasoning:
+      actions:
+         product_questions: @utils.transition to @topic.product_advisor
+            description: "Product features, pricing, plan comparisons, or recommendations"
+
+         escalate: @utils.transition to @topic.escalation
+            description: "Complaints, urgent issues, or requests to speak to a person"
+
+         off_topic: @utils.transition to @topic.off_topic
+            description: "Questions unrelated to company products"
 ```
 
-Top-level variables are visible to every topic. `product_advisor` reads `number_of_employees` the moment it receives control.
+The LLM reads each `description` and picks the best match — exactly like function-calling tool selection.
 
-### One-way gate
+### 3. Specialist topics returning to the hub
 
-`context_gate` only transitions **out**, never back in. Once the advisor topic is active it stays active, so company size is asked exactly once per session.
+```yaml
+topic product_advisor:
+   reasoning:
+      actions:
+         return_to_dispatcher: @utils.transition to @topic.dispatcher
+            description: "User's next question is not about products — re-route it"
+```
 
-### LLM recall of the pending question
+Every specialist has a `return_to_dispatcher` action. When the conversation shifts domain, the LLM triggers it and the dispatcher takes over for the next message.
 
-`product_advisor` instructions say:
-> "Look back at the conversation, find the user's original unanswered question, and answer it now."
+### 4. Company size persists everywhere
 
-The full chat transcript is available to the LLM, so no extra variable is needed to remember what was asked.
+`number_of_employees` is a top-level variable. All topics reference `{!@variables.number_of_employees}` in their instructions — no need to re-collect or pass it between topics.
 
-## Adapting to your use case
+## Adding more topics
 
-| What to change | Where |
-|---|---|
-| Collected field | Rename `number_of_employees`; change type if needed |
-| Collection prompt | Edit `context_gate` instructions |
-| Sizing tiers / answer guidance | Edit `product_advisor` instructions |
-| Agent persona | Edit `system.instructions` |
-| Welcome message | Edit `system.messages.welcome` |
+To add a new specialist (e.g. `billing`):
+
+1. Add a routing action to `dispatcher`:
+   ```yaml
+   billing: @utils.transition to @topic.billing
+      description: "Billing questions, invoices, payment methods"
+   ```
+
+2. Define the new topic and have it return to the dispatcher:
+   ```yaml
+   topic billing:
+      description: "Handles billing and payment questions"
+      reasoning:
+         instructions:->
+            | Answer billing questions.
+              Company size: {!@variables.number_of_employees} employees.
+         actions:
+            return_to_dispatcher: @utils.transition to @topic.dispatcher
+               description: "Billing handled — re-route the next question"
+   ```
 
 ## Deploy
 

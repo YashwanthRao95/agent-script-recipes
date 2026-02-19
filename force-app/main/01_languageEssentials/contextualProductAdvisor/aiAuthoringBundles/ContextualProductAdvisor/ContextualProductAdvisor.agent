@@ -1,39 +1,46 @@
-# ContextualProductAdvisor - Pre-flight Context Collection with Immediate Topic Transition
-# Demonstrates the "intercept → collect → hand off" pattern:
+# ContextualProductAdvisor - Pre-flight Collection + Dynamic Topic Routing
+# Combines two patterns:
 #
-#   Topic 1 — context_gate (start_agent)
-#     The entry point. Never answers product questions directly.
-#     Its sole job is to ask for company size and, the moment it is
-#     provided, fire 'collect_employee_count' which stores the value
-#     AND immediately transitions to the product_advisor topic.
+#   Pattern 1 — Pre-flight context collection (context_gate)
+#     The entry topic. Never answers questions. Collects 'number_of_employees'
+#     once, then transitions to the dispatcher. The employee count is stored
+#     in a shared variable and never asked again.
 #
-#   Topic 2 — product_advisor
-#     Receives control right after the number is stored.
-#     Looks back at the conversation, finds the user's original
-#     unanswered question, and answers it — and every follow-up —
-#     tailored to the stored company size.
+#   Pattern 2 — Dynamic topic routing (dispatcher)
+#     The permanent hub for all subsequent turns. Each time a user sends a
+#     message it routes to the most appropriate specialist topic based on
+#     intent. Specialist topics do their work and return here when done.
+#
+# Topic map:
+#   start_agent context_gate  →  collects company size
+#         ↓ (transition on collect)
+#   topic dispatcher           →  routes each message by intent
+#         ↓               ↑ (all specialist topics return here)
+#   ┌─────────────┬────────────┬───────────┐
+#   product_advisor  escalation   off_topic
 #
 # Key mechanics:
-#   • 'transition to @topic.product_advisor' on the collect action
-#     means the hand-off is instant: no extra turn, no re-prompting.
-#   • Variables are shared across topics, so number_of_employees is
-#     immediately visible to product_advisor after it is set.
-#   • The product_advisor topic has no way back to context_gate, so
-#     company size is never asked again for the rest of the session.
+#   • 'transition to @topic.dispatcher' on collect_employee_count means
+#     the hand-off from gate → dispatcher is instant (same turn).
+#   • The dispatcher's routing actions have clear descriptions so the LLM
+#     can pick the right one for ANY message, including the original
+#     unanswered question that triggered the pre-flight collection.
+#   • All specialist topics end with 'transition to @topic.dispatcher'
+#     so the dispatcher re-routes every new user message automatically.
+#   • number_of_employees is a top-level variable shared by all topics.
 
 config:
    agent_name: "ContextualProductAdvisor"
    agent_label: "ContextualProductAdvisor"
    agent_type: "AgentforceEmployeeAgent"
-   description: "Collects company size once, then answers all product questions tailored to that size"
+   description: "Collects company size once upfront, then routes each question to the right specialist topic"
 
 variables:
-   # Shared across both topics.
-   # Default 0 = "not yet collected".
-   # Once set to any positive value the context_gate topic is left
-   # behind permanently and will never be re-entered.
+   # Shared across all topics.
+   # Default 0 = not yet collected.
+   # context_gate is the only topic that ever writes this value.
    number_of_employees: mutable number = 0
-      description: "Number of employees in the user's company, used to personalise every product answer"
+      description: "Number of employees in the user's company, used by all topics to personalise responses"
 
 system:
    messages:
@@ -42,57 +49,127 @@ system:
 
    instructions: >
       You are a knowledgeable product advisor.
-      Answer product questions accurately and concisely.
-      Always tailor recommendations to the user's company size:
-        - Small business  (fewer than 50 employees) : ease of setup, low cost, self-service features.
+      Always tailor answers to the user's company size when it is available:
+        - Small business  (fewer than 50 employees) : ease of setup, low cost, self-service.
         - Mid-market      (50 – 500 employees)       : team collaboration, integrations, admin controls.
         - Enterprise      (more than 500 employees)  : security, SLAs, dedicated support, scalability.
 
-# ── Topic 1: Gate ──────────────────────────────────────────────────────────────
-# Entry point. Asks for company size and transitions away the moment it is given.
-# It never answers a product question — that is entirely the job of product_advisor.
+# ── Entry point ────────────────────────────────────────────────────────────────
+# Intercepts the very first user message.
+# Asks for company size, stores it, then hands off to the dispatcher.
+# This topic is never re-entered — once the variable is set it stays set.
 start_agent context_gate:
-   description: "Intercepts the first message, collects company size, then hands off to the product advisor"
+   description: "Collects company size before anything else, then routes to the dispatcher"
 
    reasoning:
       instructions:|
-         The user has just sent a message.
-         Do NOT answer their product question here.
-         Respond with exactly this:
+         The user has sent their first message.
+         Do NOT answer their question here — that is the dispatcher's job.
+         Respond with exactly this prompt:
            "Before I answer, could you quickly tell me how many employees
             your company has? This helps me give you the most relevant
             recommendation."
-         Wait for their answer, then call collect_employee_count.
+         Once the user provides a number, call collect_employee_count.
 
       actions:
-         # Stores the employee count AND immediately transitions to product_advisor.
-         # The 'transition to' suffix fires after the variable is written,
-         # so product_advisor receives control in the very same turn —
-         # no extra round-trip, no intermediate agent response.
+         # Stores the count AND immediately hands off to dispatcher.
+         # The dispatcher will then route the original (unanswered) question
+         # to the right specialist topic — no extra turn needed.
          collect_employee_count: @utils.setVariables
             with number_of_employees=...
-            transition to @topic.product_advisor
+            transition to @topic.dispatcher
 
-# ── Topic 2: Advisor ───────────────────────────────────────────────────────────
-# Permanent home for the rest of the conversation.
-# number_of_employees is already populated when this topic is entered.
+# ── Hub ────────────────────────────────────────────────────────────────────────
+# The permanent routing centre. Every specialist topic returns here when done,
+# and the dispatcher picks the best next topic for each new user message.
+topic dispatcher:
+   description: "Routes each user message to the right specialist topic based on intent"
+
+   reasoning:
+      instructions:|
+         Company size already collected: {!@variables.number_of_employees} employees.
+         Select the routing action that best matches the user's message and conversation history.
+         If the user's very first question is still unanswered, route for that question now.
+         If it's unclear, make your best guess.
+
+      actions:
+         # Product questions: features, pricing, plans, comparisons, recommendations.
+         product_questions: @utils.transition to @topic.product_advisor
+            description: "Product features, pricing, plan comparisons, or recommendations"
+
+         # Escalation: complaints, urgent issues, requests for a human agent.
+         escalate: @utils.transition to @topic.escalation
+            description: "Complaints, urgent issues, dissatisfied customers, or requests to speak to a person"
+
+         # Off-topic: anything unrelated to the company's products.
+         off_topic: @utils.transition to @topic.off_topic
+            description: "Questions unrelated to company products (weather, jokes, general knowledge, etc.)"
+
+# ── Specialist: Product Advisor ────────────────────────────────────────────────
+# Answers product questions tailored to the stored company size.
+# Returns to dispatcher when the topic shifts.
 topic product_advisor:
    description: "Answers product questions personalised to the user's company size"
 
    reasoning:
       instructions:->
-         | You are a product advisor.
-           Company size: {!@variables.number_of_employees} employees.
+         | Company size: {!@variables.number_of_employees} employees.
 
-           Tailor every answer to their company size:
+           Answer the user's product question. Tailor the response to their company size:
            - Fewer than 50   → ease of setup, affordability, self-service features
            - 50 to 500       → team collaboration, integrations, admin controls
            - More than 500   → enterprise security, SLAs, dedicated support, scalability
 
-           You have just received control from the context_gate topic.
-           The user asked a product question before you had their company size.
-           Look back at the conversation, find their original unanswered question,
-           and answer it now — incorporating the {!@variables.number_of_employees}-employee context.
+           If this is the first time this topic has been entered and the user's
+           original question has not been answered yet, answer it now with
+           the company-size context above.
 
-           For all follow-up questions in this session, answer directly.
-           Never ask for company size again — it is already stored.
+           Stay in this topic for follow-up product questions.
+           When the user's next message is clearly about a different domain
+           (e.g. a complaint or an off-topic question), use return_to_dispatcher.
+
+      actions:
+         return_to_dispatcher: @utils.transition to @topic.dispatcher
+            description: "User's next question is not about products — re-route it"
+
+# ── Specialist: Escalation ─────────────────────────────────────────────────────
+# Handles complaints, urgent issues, and requests to reach a human.
+# Returns to dispatcher when the escalation is resolved or shifts topic.
+topic escalation:
+   description: "Handles complaints, urgent issues, and escalation to a human agent"
+
+   reasoning:
+      instructions:->
+         | The user needs escalation support.
+           Company size: {!@variables.number_of_employees} employees.
+
+           Acknowledge the issue with empathy. Apologise where appropriate.
+           Explain the escalation path (e.g. senior support, account manager).
+           For enterprise customers (500+ employees) mention the dedicated support line.
+
+           Once the escalation is acknowledged or resolved, use return_to_dispatcher
+           if the user continues with a different type of question.
+
+      actions:
+         return_to_dispatcher: @utils.transition to @topic.dispatcher
+            description: "Escalation handled — re-route the user's next question"
+
+# ── Specialist: Off-topic ──────────────────────────────────────────────────────
+# Gracefully handles messages outside the product domain.
+# Always returns to dispatcher after responding.
+topic off_topic:
+   description: "Handles questions unrelated to company products with a polite redirect"
+
+   reasoning:
+      instructions:->
+         | The user has asked something outside the product domain.
+           Politely acknowledge it and redirect them:
+             "That's a bit outside what I can help with here — I'm best at
+              answering product questions. Is there something about our
+              products or plans I can help you with?"
+
+           Then use return_to_dispatcher so the next message is routed correctly.
+
+      actions:
+         return_to_dispatcher: @utils.transition to @topic.dispatcher
+            description: "Return to routing after the off-topic redirect"

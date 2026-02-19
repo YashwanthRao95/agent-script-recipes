@@ -1,0 +1,48 @@
+# SingleInputCollection - Collecting a Single Input from the User
+# Demonstrates the simplest input pattern: ask the user for exactly one value,
+# store it in a variable, and use it to drive the agent's next action.
+#
+# Use-case: Newsletter subscription.
+# The agent asks for the user's email address (one input) and then confirms
+# the subscription. The same pattern applies to any scenario where you need
+# just a single piece of information before proceeding.
+
+config:
+   agent_name: "SingleInputCollection"
+   agent_label: "SingleInputCollection"
+   agent_type: "AgentforceEmployeeAgent"
+   description: "Collects a single email address from the user to subscribe them to a newsletter"
+
+variables:
+   # The one piece of information we need from the user.
+   # 'mutable' allows the agent to write to this variable via @utils.setVariables.
+   email: mutable string = ""
+      description: "Email address provided by the user for newsletter subscription"
+
+system:
+   messages:
+      welcome: "Hi! I can sign you up for our newsletter. What email address should I use?"
+      error: "Sorry, something went wrong. Please try again."
+
+   instructions: "You are a newsletter subscription assistant. Your only job is to collect the user's email address and confirm their subscription. Do not discuss other topics."
+
+start_agent subscription:
+   description: "Collects the user's email address and confirms their newsletter subscription"
+
+   reasoning:
+      instructions:->
+         |
+           Help the user subscribe to the newsletter.
+
+         if @variables.email == "":
+            | No email collected yet. Politely ask the user for their email address.
+         else:
+            | Email collected: {!@variables.email}
+              Confirm the subscription with a friendly message and thank the user.
+              Do NOT ask any more questions — the task is complete.
+
+      actions:
+         # LLM slot-filling with '...' lets the model extract the email naturally
+         # from whatever the user says (e.g., "It's john@example.com" or just "john@example.com").
+         collect_email: @utils.setVariables
+            with email=...

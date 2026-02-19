@@ -1,0 +1,165 @@
+# MultipleInputCollection - Collecting Several Inputs from the User
+# Demonstrates two complementary patterns for gathering multiple pieces of
+# information in a single conversation:
+#
+#   Pattern A — Conversational (one-at-a-time):
+#     The agent asks for each field separately, checking after every user
+#     reply whether the next field is still missing.  Good for forms where
+#     the user is unlikely to volunteer all answers upfront.
+#
+#   Pattern B — Bulk (all-at-once):
+#     The agent gives the user a numbered list and lets them answer
+#     everything in one message.  Good for power users or short forms.
+#
+# Use-case: Support ticket creation.
+# The agent collects name, email, subject, and description before
+# handing off to a Flow that creates the ticket record.
+
+config:
+   agent_name: "MultipleInputCollection"
+   agent_label: "MultipleInputCollection"
+   agent_type: "AgentforceEmployeeAgent"
+   description: "Collects multiple inputs (name, email, subject, description) to create a support ticket"
+
+variables:
+   # ── Fields to collect ──────────────────────────────────────────────────────
+   customer_name: mutable string = ""
+      description: "Full name of the person raising the support ticket"
+
+   customer_email: mutable string = ""
+      description: "Contact email address for the support ticket"
+
+   subject: mutable string = ""
+      description: "One-line summary of the issue"
+
+   description: mutable string = ""
+      description: "Detailed description of the issue"
+
+   # ── Workflow state ─────────────────────────────────────────────────────────
+   ticket_submitted: mutable boolean = False
+      description: "True once all fields are collected and the ticket has been created"
+
+   ticket_id: mutable string = ""
+      description: "Ticket reference number returned after creation"
+
+system:
+   messages:
+      welcome: "Hi! I'll help you raise a support ticket. Let's start — what's your name?"
+      error: "Sorry, I ran into a problem creating your ticket. Please try again."
+
+   instructions: "You are a support ticket assistant. Collect the user's name, email, issue subject, and a description of the problem. Be concise and friendly. Do not ask for any information beyond these four fields."
+
+start_agent support_intake:
+   description: "Guides the user through all required fields to create a support ticket"
+
+   reasoning:
+      # ── Pattern A: Conversational (one field per turn) ────────────────────
+      # The instructions block checks each variable in sequence.
+      # The first empty field determines what the agent asks next.
+      # Once all four fields are filled, the agent confirms and submits.
+      instructions:->
+         |
+           Help the user create a support ticket by collecting the required information.
+
+           Current progress:
+         if @variables.customer_name == "":
+            | - Name       : not yet provided  ← ask for this next
+         else:
+            | - Name       : {!@variables.customer_name}
+
+         if @variables.customer_email == "":
+            | - Email      : not yet provided
+         else:
+            | - Email      : {!@variables.customer_email}
+
+         if @variables.subject == "":
+            | - Subject    : not yet provided
+         else:
+            | - Subject    : {!@variables.subject}
+
+         if @variables.description == "":
+            | - Description: not yet provided
+         else:
+            | - Description: {!@variables.description}
+
+         if @variables.customer_name == "" or @variables.customer_email == "" or @variables.subject == "" or @variables.description == "":
+            |
+              Ask for the first field shown above as 'not yet provided'.
+              Ask for only ONE field at a time — wait for the user's answer before continuing.
+         else:
+            | All fields collected. Show the user a summary and confirm before submitting:
+              Name       : {!@variables.customer_name}
+              Email      : {!@variables.customer_email}
+              Subject    : {!@variables.subject}
+              Description: {!@variables.description}
+
+              Ask: "Does everything look right? Reply 'yes' to submit or tell me what to change."
+
+              If the user confirms, run the submit_ticket action.
+              If the user wants a correction, update the relevant variable and show the summary again.
+
+      # ── Pattern B: Bulk collection (optional shortcut) ───────────────────
+      # If the user provides all four values in a single message
+      # (e.g. pasted from a form), the LLM fills them all at once.
+      # The 'available when' guard keeps this action hidden until the
+      # user has actually provided enough content in one go.
+      #
+      # To enable Pattern B, expose collect_all_at_once to users by
+      # removing or adjusting the 'available when' condition, and update
+      # the system instructions to offer the option.
+
+      actions:
+         # ── Individual field collectors (Pattern A) ────────────────────────
+         collect_name: @utils.setVariables
+            with customer_name=...
+
+         collect_email: @utils.setVariables
+            with customer_email=...
+
+         collect_subject: @utils.setVariables
+            with subject=...
+
+         collect_description: @utils.setVariables
+            with description=...
+
+         # ── Bulk collector (Pattern B) ─────────────────────────────────────
+         # Collects all four fields from a single user message.
+         # The LLM fills each slot from whatever the user typed.
+         collect_all_at_once: @utils.setVariables
+            available when @variables.customer_name == "" and @variables.customer_email == "" and @variables.subject == "" and @variables.description == ""
+            with customer_name=...
+            with customer_email=...
+            with subject=...
+            with description=...
+
+         # ── Submission ─────────────────────────────────────────────────────
+         # Runs only after all four variables are populated.
+         submit_ticket: @actions.create_support_ticket
+            available when @variables.customer_name != "" and @variables.customer_email != "" and @variables.subject != "" and @variables.description != ""
+            with name=@variables.customer_name
+            with email=@variables.customer_email
+            with subject=@variables.subject
+            with description=@variables.description
+            set @variables.ticket_id = @outputs.ticket_id
+            set @variables.ticket_submitted = @outputs.success
+
+   # ── Action definitions ─────────────────────────────────────────────────────
+   # Replace the target with your own Flow or Apex class that creates the record.
+   actions:
+      create_support_ticket:
+         description: "Creates a new support ticket record with the collected user details"
+         inputs:
+            name: string
+               description: "Full name of the person raising the ticket"
+            email: string
+               description: "Contact email for the ticket"
+            subject: string
+               description: "One-line summary of the issue"
+            description: string
+               description: "Full description of the problem the user is experiencing"
+         outputs:
+            ticket_id: string
+               description: "Reference number of the newly created support ticket"
+            success: boolean
+               description: "True if the ticket was created successfully"
+         target: "flow://CreateSupportTicket"

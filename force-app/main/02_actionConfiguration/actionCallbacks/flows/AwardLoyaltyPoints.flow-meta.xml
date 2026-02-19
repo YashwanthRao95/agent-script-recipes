@@ -64,7 +64,7 @@
     </assignments>
     <variables>
         <name>amount</name>
-        <dataType>Currency</dataType>
+        <dataType>Number</dataType>
         <isCollection>false</isCollection>
         <isInput>true</isInput>
         <isOutput>false</isOutput>

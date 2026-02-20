@@ -13,6 +13,7 @@ config:
     agent_label: "PromptTemplateActions"
     agent_type: "AgentforceEmployeeAgent"
     description: "Provides guidance to guests by creating personalized schedules."
+
 start_agent topic_selector:
     description: "Welcome users and begin providing personalized scheduling guidance."
 
@@ -21,27 +22,27 @@ start_agent topic_selector:
             Select the tool that best matches the user's message and conversation history. If it's unclear, make your best guess.
         actions:
             generate_schedule: @utils.transition to @topic.schedule_generation
-                description: "Create personalized schedules"
+                description: "Route here for any scheduling request — no prior input needed before routing"
 
 topic schedule_generation:
-    description: "Generates personalized schedules for users based on their email address."
+    description: "Generates a personalized schedule of experiences — all required information is retrieved automatically from Salesforce; do not ask the user about goals, preferences, or interests before generating."
 
     reasoning:
         instructions: ->
             | When a user asks for help scheduling their day or creating a personalized schedule:
             | 1. Ask for their email address
-            | 2. When you have the email address, run {!@actions.Generate_Personalized_Schedule}
+            | 2. When you have the email address, run {!@actions.generate_personalized_schedule}
             | 3. Output the personalized schedule in a message
             | 
             | Never ask about goals, preferences, or interests.
             | If the user does not provide an email address, ask for it again.
 
         actions:
-            Generate_Personalized_Schedule: @actions.Generate_Personalized_Schedule
+            generate_personalized_schedule: @actions.generate_personalized_schedule
                 with "Input:email" = ...
 
     actions:
-        Generate_Personalized_Schedule:
+        generate_personalized_schedule:
           description: "Generate a personalized schedule with a prompt template. This action automatically generates a personalized schedule that matches the guest's goals, preferences, or interests by retrieving that information from Salesforce using their email address. This action requires the user's email address."
           inputs:
           # Prompt Template inputs follow pattern, "Input:<Field API Name>"
@@ -56,4 +57,3 @@ topic schedule_generation:
               is_used_by_planner: True
               is_displayable: True
           target: "generatePromptResponse://Generate_Personalized_Schedule"
-

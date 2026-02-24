@@ -12,7 +12,8 @@ graph TD
     A[Agent Starts] --> B[Initialize Payment Variables]
     B --> C[start_agent routes to payment_processing]
     C --> D[User Initiates Payment]
-    D --> E[Call process_payment Action]
+    D --> D2[set_payment_info stores amount & method]
+    D2 --> E[Call process_payment Action]
     E --> F[Capture Outputs: transaction_id, success]
     F --> G[Run Callback 1: send_receipt]
     G --> H[Capture receipt_sent Output]
@@ -42,9 +43,12 @@ After a primary action completes, use `run` to execute follow-up actions:
 
 ```agentscript
 actions:
+   set_payment_info: @utils.setVariables
+      with payment_amount=...
+      with payment_method=...
    make_payment: @actions.process_payment
       with amount=...
-      with method=...
+      with method=@variables.payment_method
       # Capture primary action outputs
       set @variables.transaction_id = @outputs.transaction_id
       set @variables.payment_successful = @outputs.success
@@ -62,9 +66,12 @@ The `run` block executes **after** the primary action succeeds.
 Chain multiple actions sequentially:
 
 ```agentscript
+set_payment_info: @utils.setVariables
+   with payment_amount=...
+   with payment_method=...
 make_payment: @actions.process_payment
    with amount=...
-   with method=...
+   with method=@variables.payment_method
    set @variables.transaction_id = @outputs.transaction_id
    set @variables.payment_successful = @outputs.success
    # Callback 1: Send receipt
@@ -86,8 +93,50 @@ Multiple `run` statements execute in sequence after the primary action.
 ### Complete Recipe Example
 
 ```agentscript
+config:
+   agent_name: "ActionCallbacks"
+   agent_label: "ActionCallbacks"
+   agent_type: "AgentforceEmployeeAgent"
+   description: "Processes payments with post-action callbacks"
+
+variables:
+   payment_amount: mutable number = 0
+      description: "Payment amount"
+
+   payment_method: mutable string = ""
+      description: "Payment method used"
+
+   transaction_id: mutable string = ""
+      description: "Transaction ID from payment"
+
+   payment_successful: mutable boolean = False
+      description: "Whether payment succeeded"
+
+   receipt_sent: mutable boolean = False
+      description: "Whether receipt was sent"
+
+   points_awarded: mutable number = 0
+      description: "Loyalty points awarded"
+
+system:
+   messages:
+      welcome: "I'll help you process your payment securely."
+      error: "Payment processing error. Please try again."
+
+   instructions: "You are a payment processing assistant that helps customers process payments and provides transaction confirmations. Never ask for card details, billing information, or other payment specifics."
+
+start_agent topic_selector:
+   description: "Welcome users and begin payment processing"
+
+   reasoning:
+      instructions:|
+         Select the tool that best matches the user's message and conversation history. If it's unclear, make your best guess.
+      actions:
+         go_to_payment_processing: @utils.transition to @topic.payment_processing
+            description: "User wants to make a payment, process a transaction, or ask about payment status, receipts, or loyalty points"
+
 topic payment_processing:
-   description: "Processes payments with callbacks"
+   description: "Handles payment requests — collecting payment amount and method, processing transactions, sending receipts, awarding loyalty points, and logging for audit"
 
    actions:
       process_payment:
@@ -138,31 +187,23 @@ topic payment_processing:
 
    reasoning:
       instructions:->
-         | Process payments and handle post-payment tasks.
-
-           Status:
-           - Amount: ${!@variables.payment_amount}
-           - Method: {!@variables.payment_method}
-
-         if @variables.transaction_id:
-            | - Transaction: {!@variables.transaction_id}
+         if not @variables.transaction_id:
+            | Store the amount and method first, then process the payment.
+              - Amount: ${!@variables.payment_amount}
+              - Method: {!@variables.payment_method}
          else:
-            | - Transaction: None
-
-         | - Success: {!@variables.payment_successful}
-           - Receipt sent: {!@variables.receipt_sent}
-           - Points: {!@variables.points_awarded}
-
-           Guide the user through the payment process.
-
-           Store the amount first, then process the payment.
-
+            | Payment has been processed, inform the user:
+              - Transaction: {!@variables.transaction_id}
+              - Success: {!@variables.payment_successful}
+              - Receipt sent: {!@variables.receipt_sent}
+              - Points: {!@variables.points_awarded}
       actions:
-         set_amount: @utils.setVariables
+         set_payment_info: @utils.setVariables
             with payment_amount=...
+            with payment_method=...
          make_payment: @actions.process_payment
             with amount=...
-            with method=...
+            with method=@variables.payment_method
             set @variables.transaction_id = @outputs.transaction_id
             set @variables.payment_successful = @outputs.success
             run @actions.send_receipt
@@ -234,7 +275,8 @@ Agent: I'll help you process your payment securely.
 
 User: Process a payment of $150 using credit card
 
-[Agent calls process_payment action]
+[Agent calls set_payment_info, then process_payment]
+  → set_payment_info(payment_amount=150, payment_method="credit card")
   → process_payment(amount=150, method="credit card")
   → Returns: transaction_id="TXN-456", success=true
 
@@ -252,17 +294,18 @@ User: Process a payment of $150 using credit card
 Agent: Payment processed successfully!
        - Transaction ID: TXN-456
        - Receipt sent: Yes
-       - Loyalty points awarded: 150
+       - Loyalty points awarded: 1500
 ```
 
 ### Behind the Scenes
 
-1. Primary action `process_payment` executes first
-2. Outputs captured: `transaction_id`, `success`
-3. Callback 1 `send_receipt` runs with transaction data
-4. Callback 2 `award_points` runs with amount
-5. Callback 3 `log_transaction` runs for audit
-6. All variables updated for agent to use in response
+1. `set_payment_info` stores `payment_amount` and `payment_method` from user input
+2. Primary action `process_payment` executes with `amount` and `method=@variables.payment_method`
+3. Outputs captured: `transaction_id`, `success`
+4. Callback 1 `send_receipt` runs with transaction data
+5. Callback 2 `award_points` runs with amount
+6. Callback 3 `log_transaction` runs for audit
+7. All variables updated for agent to use in response
 
 ## Best Practices
 

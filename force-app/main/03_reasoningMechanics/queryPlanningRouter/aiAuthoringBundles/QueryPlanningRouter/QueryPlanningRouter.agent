@@ -1,35 +1,33 @@
-# QueryPlanningRouter - Before-Reasoning Context Classification + Technique-Based Routing
+# QueryPlanningRouter - Context Classification + Technique-Based Routing
 #
-# Pattern: on every turn the agent classifies the user's query domain in
-# before_reasoning, chooses a query-planning technique in reasoning, and
-# then routes to the right specialist topic based on the classified context.
+# Pattern: on every turn the LLM classifies the query domain, checks its
+# previous answer for errors, picks a planning technique, and routes — all
+# inside a single reasoning/instructions block. No external flows are needed
+# for the planning stage; before_reasoning is only used in product_search
+# where real retrieval systems (cache, SQL, knowledge) must be called before
+# the LLM runs.
 #
 # Topic map:
 #
 #   start_agent query_planner  (hub — re-entered on every turn)
-#     ├── before_reasoning
-#     │     1. classify_context  → sets @variables.query_context
-#     │                            (payroll | benefit | talent | outsourcing |
-#     │                             insurance | time_attendance | retirement |
-#     │                             compliance | competitor | error | general)
-#     │     2. check_previous_answer (if previous_answer is set)
-#     │           → if error found, overrides query_context to "error"
-#     ├── reasoning
-#     │     Pick one planning technique for the current question:
-#     │       • Sub-query decomposition
-#     │       • HyDE (Hypothetical Document Embedding)
-#     │       • Step-back prompting
-#     │       • Chain of thought
-#     ├── after_reasoning
-#     │     Store the response for error-checking on the next turn.
-#     │     Extend here for caching, analytics, or audit logging.
-#     └── routing actions (available when query_context is set)
-#           query_context == "error"  →  @topic.escalation
-#           query_context != "error"  →  @topic.product_search
+#     └── reasoning/instructions (single LLM pass)
+#           Step 1 — check conversation history for errors in previous answer
+#                    set @variables.previous_answer_has_error = ...
+#           Step 2 — classify current question into a domain context tag
+#                    set @variables.query_context = ...
+#                    (payroll | benefit | talent | outsourcing | insurance |
+#                     time_attendance | retirement | compliance | competitor |
+#                     error | general)
+#                    if previous answer had errors → override to "error"
+#           Step 3 — pick a planning technique (if context != "error")
+#                    Sub-query decomposition | HyDE | Step-back | Chain of thought
+#           Step 4 — call the routing action
+#                    escalate               if query_context == "error"
+#                    route_to_product_search otherwise
 #
 #   topic product_search
-#     ├── before_reasoning  →  qa_cache_lookup
-#     │                        (sets cache_hit / cached_answer)
+#     ├── before_reasoning  →  qa_cache_lookup  (real retrieval — must run
+#     │                        before LLM so cache result shapes instructions)
 #     └── reasoning
 #           cache hit  →  return cached answer immediately
 #           cache miss →  generate_sql + knowledge_search, synthesise
@@ -37,39 +35,37 @@
 #   topic escalation
 #     Acknowledge the error, hand off to a human agent.
 #
-# Key mechanics:
-#   • before_reasoning fires BEFORE the LLM reasons — ideal for context
-#     classification that should inform reasoning rather than be produced by it.
-#   • The classified context drives both the reasoning instructions and the
-#     routing actions, keeping classify-once / use-everywhere as a principle.
-#   • after_reasoning fires AFTER the LLM response — used here to persist
-#     the answer for error-checking on the following turn.
-#   • Routing actions are gated with 'available when @variables.query_context != ""'
-#     so they cannot fire before before_reasoning has set the context.
+# Why no flows for query_planner?
+#   classify_context, check_previous_answer, and store_response can all be
+#   replaced by LLM reasoning:
+#     • Classification   → set @variables.query_context = ...  (LLM infers)
+#     • Error detection  → LLM reads its own last message from conversation
+#                          history and evaluates quality
+#     • Store response   → unnecessary; LLM always has conversation history
+#   Use flows when you need deterministic/non-LLM logic (database lookup,
+#   keyword rules, external API). Use reasoning for LLM-native tasks.
+#
+# Why before_reasoning in product_search?
+#   qa_cache_lookup is a real database call that must complete BEFORE the LLM
+#   decides whether to run SQL or knowledge search. That dependency requires
+#   before_reasoning; it cannot be inlined into instructions.
 
 config:
    agent_name: "QueryPlanningRouter"
    agent_label: "QueryPlanningRouter"
    agent_type: "AgentforceEmployeeAgent"
-   description: "Classifies query context before reasoning, picks a planning technique, then routes to the right specialist topic"
+   description: "Classifies query context in reasoning, picks a planning technique, then routes to the right specialist topic"
 
 variables:
-   # Set by classify_context in before_reasoning on every turn.
-   # Empty string = classification not yet run for this turn (blocks routing).
-   # Valid values: payroll | benefit | talent | outsourcing | insurance |
-   #               time_attendance | retirement | compliance | competitor |
-   #               error | general
+   # Set by the LLM in reasoning/instructions on every turn.
+   # Used by product_search instructions to tailor retrieval and the response.
    query_context: mutable string = ""
-      description: "Domain context of the current user question, set before reasoning on every turn"
+      description: "Domain context of the current user question, classified by the LLM each turn"
 
-   # Written by after_reasoning; read by before_reasoning on the next turn.
-   # Allows the agent to detect errors in its own previous responses.
-   previous_answer: mutable string = ""
-      description: "The agent's most recent response, stored after every turn for error-checking"
-
-   # Set by check_previous_answer in before_reasoning when an error is found.
+   # Set by the LLM in reasoning/instructions on every turn.
+   # True when the LLM judges its own previous response to be erroneous.
    previous_answer_has_error: mutable boolean = False
-      description: "True when before_reasoning detects an error in the previous response"
+      description: "True when the LLM detects an error in its previous response"
 
    # Set by qa_cache_lookup in product_search before_reasoning.
    cache_hit: mutable boolean = False
@@ -89,138 +85,88 @@ system:
       Be concise, accurate, and cite your reasoning when helpful.
 
 # ── Entry point and turn hub ───────────────────────────────────────────────────
-# This topic is the entry point AND the hub that is re-entered after every
-# specialist topic completes. On every turn:
-#   1. before_reasoning classifies the query and checks the previous answer.
-#   2. reasoning picks a planning technique and states a query plan.
-#   3. after_reasoning stores the response for the next turn.
-#   4. A routing action transitions to the right specialist topic.
+# Re-entered after every specialist topic completes.
+# A single reasoning pass handles classification, error-checking, technique
+# selection, and routing — no flows, no before_reasoning, no after_reasoning.
 start_agent query_planner:
    description: "Classifies the query domain, plans how to answer it, then routes to the right specialist topic"
 
-   actions:
-      # Reads @system_variables.user_input and classifies the question into
-      # one of the domain context tags listed above.
-      classify_context:
-         description: "Classify the user's question into a domain context tag"
-         inputs:
-            user_input: string
-               description: "The raw user question to classify"
-         outputs:
-            context: string
-               description: "One of: payroll | benefit | talent | outsourcing | insurance | time_attendance | retirement | compliance | competitor | error | general"
-         target: "flow://ClassifyQueryContext"
-
-      # Inspects the previous response for errors (hallucinations, contradictions,
-      # missing data). Only called when previous_answer is non-empty.
-      check_previous_answer:
-         description: "Inspect the previous response and flag any errors"
-         inputs:
-            previous_answer: string
-               description: "The agent's last response"
-         outputs:
-            has_error: boolean
-               description: "True if the previous answer contains an error"
-         target: "flow://CheckAnswerQuality"
-
-      # Persists the current response for error-checking on the following turn.
-      # Extend this action to also write to an audit log or analytics store.
-      store_response:
-         description: "Store the current response in the previous_answer variable"
-         inputs:
-            response: string
-               description: "The agent's response from this turn"
-         outputs:
-            stored_response: string
-               description: "The response that was stored"
-         target: "flow://StoreAgentResponse"
-
    reasoning:
-      # ── Before reasoning ──────────────────────────────────────────────────
-      # Step 1: Classify the current question → sets query_context.
-      # Step 2: If there was a previous answer, check it for errors.
-      #         An error overrides the context to "error" so the escalation
-      #         routing action fires instead of product_search.
-      before_reasoning:
-         run @actions.classify_context
-            with user_input=@system_variables.user_input
-            set @variables.query_context = @outputs.context
-
-         if @variables.previous_answer != "":
-            run @actions.check_previous_answer
-               with previous_answer=@variables.previous_answer
-               set @variables.previous_answer_has_error = @outputs.has_error
-            if @variables.previous_answer_has_error:
-               set @variables.query_context = "error"
-
-      # ── Reasoning instructions ─────────────────────────────────────────────
-      # The LLM now knows the domain context (set above) and must choose a
-      # query-planning technique. Its output is a brief plan — NOT the answer.
-      # The routing action hands off to the specialist topic that answers.
       instructions:|
-         Current question domain: {!@variables.query_context}
+         Work through the following steps in order. Do not skip any step.
 
-         Your job is to plan HOW to answer the question, not to answer it.
-         Choose exactly one query-planning technique based on the question type:
+         ── Step 1: Check previous answer for errors ────────────────────────
+         Look at the conversation history.
+         If the agent has already responded at least once, evaluate whether
+         that last response contained any of these problems:
+           • Factual errors or contradictions
+           • Explicit uncertainty ("I'm not sure", "I cannot confirm")
+           • An incomplete or nonsensical answer
+         Set the flag accordingly:
+           set @variables.previous_answer_has_error = ...
+
+         ── Step 2: Classify the current question ───────────────────────────
+         If @variables.previous_answer_has_error is True, use "error".
+         Otherwise classify the user's question into exactly one of:
+           payroll         — pay runs, tax withholding, deductions, paychecks
+           benefit         — health, dental, vision, FSA, HSA, leave
+           talent          — recruiting, onboarding, performance, learning
+           outsourcing     — managed services, BPO, PEO arrangements
+           insurance       — workers comp, liability, group policies
+           time_attendance — time tracking, scheduling, overtime, PTO
+           retirement      — 401k, pension, retirement plans
+           compliance      — legal, regulatory, audits, reporting
+           competitor      — comparisons with other vendors or products
+           error           — user reports a bug, wrong answer, or system issue
+           general         — anything that does not fit the above
+         Set the context:
+           set @variables.query_context = ...
+
+         ── Step 3: Pick a planning technique (skip if context is "error") ──
+         Choose exactly one technique based on the question type:
 
            • Sub-query decomposition — the question has multiple independent
-             parts that each need a separate lookup (e.g. "Compare payroll
-             and benefit plan pricing and list the support SLAs for each").
+             parts each needing a separate lookup (e.g. "Compare payroll and
+             benefit plan pricing and list the support SLAs for each").
 
            • HyDE (Hypothetical Document Embedding) — generate a short
-             hypothetical answer to the question, then use it to retrieve
-             real matching documents from the knowledge base. Best for
-             open-ended questions where the exact phrasing may not match
-             indexed documents.
+             hypothetical answer, then use it to retrieve real matching
+             documents. Best for open-ended questions where the user's
+             phrasing may not match indexed documents.
 
            • Step-back prompting — the question is very specific; ask a
              broader version first to surface foundational knowledge (e.g.
-             "Why did my paycheck change?" → step back to "What factors
-             affect paycheck calculations?").
+             "Why did my paycheck change?" → "What factors affect paycheck
+             calculations?").
 
            • Chain of thought — the answer requires sequential reasoning
-             where each step depends on the previous one (e.g. eligibility
+             where each step depends on the previous one (eligibility
              calculations, compliance rule chains, error diagnosis).
 
          State the chosen technique and a 2-3 sentence plan.
-         Do NOT attempt to answer the question — the routing action will
-         hand off to the specialist topic that does that.
+         Do NOT attempt to answer the question — the routing action hands
+         off to the specialist topic that does that.
 
-      # ── After reasoning ────────────────────────────────────────────────────
-      # Runs after every turn. Stores the response so before_reasoning can
-      # inspect it for errors on the following turn.
-      # Extend here for Q&A caching, audit logging, or usage analytics.
-      after_reasoning:
-         run @actions.store_response
-            with response=@variables.previous_answer
-            set @variables.previous_answer = @outputs.stored_response
+         ── Step 4: Call the routing action ────────────────────────────────
+         If @variables.query_context is "error" → call escalate.
+         Otherwise → call route_to_product_search.
 
-      # ── Routing actions ────────────────────────────────────────────────────
-      # Gated by 'available when query_context != ""' so they can only fire
-      # after before_reasoning has successfully classified the query.
       actions:
-         # Error context: either the question signals an error/system issue,
-         # or the previous answer was flagged as incorrect by check_previous_answer.
          escalate: @utils.transition to @topic.escalation
-            description: "Query context is 'error' or the previous answer had an error — escalate to a human agent"
-            available when @variables.query_context == "error"
+            description: "Context is 'error' or previous answer had an error — escalate to a human agent"
 
-         # All other valid domain contexts: route to the product search topic.
          route_to_product_search: @utils.transition to @topic.product_search
             description: "Route payroll, benefit, talent, compliance, and all other domain questions to the product search topic"
-            available when @variables.query_context != "" and @variables.query_context != "error"
 
 # ── Specialist: Product Search ─────────────────────────────────────────────────
 # Handles all non-error domain questions.
-# before_reasoning checks the Q&A cache first. On a cache hit the LLM returns
-# the cached answer immediately. On a cache miss it runs SQL generation and
-# knowledge search, then synthesises both results into a response.
-# Always returns to query_planner when done so the hub re-classifies the next turn.
+# before_reasoning is used here because qa_cache_lookup is a real database
+# call that must complete before the LLM runs so its result can gate the
+# SQL and knowledge-search actions via 'available when'.
 topic product_search:
    description: "Answers domain questions using Q&A cache lookup, SQL generation, and knowledge search"
 
    actions:
-      # Check the Q&A cache before running any heavy retrieval.
       qa_cache_lookup:
          description: "Look up the current question in the Q&A response cache"
          inputs:
@@ -235,7 +181,6 @@ topic product_search:
                description: "The cached answer; empty if cache_hit is False"
          target: "flow://QACacheLookup"
 
-      # Generates a SQL query against the product/plan database.
       generate_sql:
          description: "Generate and run a SQL query for structured product or plan data"
          inputs:
@@ -250,7 +195,6 @@ topic product_search:
                description: "True if the query ran without errors"
          target: "flow://GenerateAndRunSQL"
 
-      # Searches the knowledge base for relevant articles or documents.
       knowledge_search:
          description: "Search the knowledge base for articles relevant to the question"
          inputs:
@@ -266,9 +210,8 @@ topic product_search:
          target: "flow://KnowledgeSearch"
 
    reasoning:
-      # ── Before reasoning ──────────────────────────────────────────────────
-      # Check the Q&A cache before any reasoning. If a cached answer exists,
-      # the LLM can return it immediately without running SQL or knowledge search.
+      # qa_cache_lookup must run before the LLM so that cache_hit is known
+      # when 'available when not @variables.cache_hit' is evaluated.
       before_reasoning:
          run @actions.qa_cache_lookup
             with query_context=@variables.query_context
@@ -294,26 +237,20 @@ topic product_search:
                  tailored to the domain: {!@variables.query_context}.
 
       actions:
-         # SQL retrieval — only when there is no cache hit.
          run_sql: @actions.generate_sql
             with query_context=@variables.query_context
             with user_question=@system_variables.user_input
             available when not @variables.cache_hit
 
-         # Knowledge search — only when there is no cache hit.
          search_knowledge: @actions.knowledge_search
             with query_context=@variables.query_context
             with user_question=@system_variables.user_input
             available when not @variables.cache_hit
 
-         # Return to the hub so the next user message is re-classified.
          done: @utils.transition to @topic.query_planner
             description: "Answer delivered — return to the query planner for the next question"
 
 # ── Specialist: Escalation ─────────────────────────────────────────────────────
-# Handles the "error" context: either classify_context returned "error" directly,
-# or before_reasoning detected an error in the previous answer and overrode the
-# context. Acknowledges the issue and hands off to a human agent.
 topic escalation:
    description: "Handles error context — acknowledges the issue and transfers to a human agent"
 
@@ -323,8 +260,8 @@ topic escalation:
          This means one of two things:
            • The user's question itself signals an error, system issue, or
              a complaint that requires human intervention.
-           • The previous agent response was flagged as incorrect or incomplete
-             by the quality-check in before_reasoning.
+           • The LLM judged its own previous response as incorrect or
+             incomplete and set previous_answer_has_error to True.
 
          Respond with empathy. Briefly acknowledge the issue.
          Do NOT attempt to re-answer the failed question.
